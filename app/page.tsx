@@ -14,61 +14,53 @@ export default function Page() {
 
   if (activeJob) {
     return (
-      <main className="bg-background relative min-h-svh">
+      <main className="relative flex h-svh flex-col overflow-hidden bg-background">
         <header className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5">
           <Link href="/" className="flex items-center gap-2.5">
             <Logo />
-            <span className="text-sm font-medium tracking-tight">EyeContact</span>
+            <span className="text-sm font-medium tracking-tight">
+              EyeContact
+            </span>
           </Link>
           <ThemeToggle />
         </header>
 
-        <section className="mx-auto max-w-[1400px] px-6 pb-12">
-          <Editor
-            initialJob={activeJob}
-            onExit={() => setActiveJob(null)}
-          />
+        <section className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 px-6 pb-6">
+          <Editor initialJob={activeJob} onExit={() => setActiveJob(null)} />
         </section>
       </main>
     )
   }
 
   return (
-    <main className="bg-background relative min-h-svh">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full w-full overflow-hidden"
-      >
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 blur-[120px] rounded-full" />
-      </div>
-
-      <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4 mt-2 rounded-full bg-background/50 backdrop-blur-lg border border-border/40 shadow-sm transition-all">
-        <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+    <main className="relative min-h-svh bg-background">
+      <header className="mx-auto mt-2 flex max-w-3xl items-center justify-between border-b px-4 py-3">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+        >
           <Logo />
-          <span className="text-sm font-semibold tracking-tight">EyeContact</span>
+          <span className="text-sm font-semibold tracking-tight">
+            EyeContact
+          </span>
         </Link>
         <ThemeToggle />
       </header>
 
-      <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-16 pb-12 text-center sm:pt-24">
-        <div className="mb-6 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary backdrop-blur-sm">
-          <span className="mr-2 flex size-1.5 rounded-full bg-primary" />
+      <section className="mx-auto flex max-w-3xl flex-col px-4 pt-8 pb-5">
+        <h1 className="text-2xl font-semibold tracking-tight">
           EyeContact Studio
-        </div>
-        <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tighter sm:text-6xl">
-          Look people in the eye.
         </h1>
-        <p className="mt-5 max-w-xl text-balance text-base text-muted-foreground sm:text-lg leading-relaxed">
-          Upload a talking-head video. Then fix gaze, retouch, or remove the
-          background — all in one seamless render.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Upload a video. Editing starts automatically.
         </p>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 pb-10">
+      <section className="mx-auto max-w-3xl px-4 pb-5">
         <Uploader onUploaded={setActiveJob} />
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 pb-24">
+      <section className="mx-auto max-w-3xl px-4 pb-12">
         <RecentJobs onSelect={setActiveJob} />
       </section>
     </main>
@@ -79,7 +71,7 @@ function Logo() {
   return (
     <span
       aria-hidden
-      className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg"
+      className="flex size-7 items-center justify-center rounded-lg bg-foreground text-background"
     >
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
         <path

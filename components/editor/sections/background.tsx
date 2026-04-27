@@ -20,28 +20,15 @@ type Props = {
   onOpenSubjectPicker: () => void
   /** Whether SAM2 is available in this deployment. */
   samAvailable?: boolean
-  /** True when output_format is webm_alpha (transparent allowed). */
-  alphaAvailable: boolean
 }
 
 const MODES: {
   id: BackgroundMaskMode
   label: string
-  hint: string
   Icon: React.ComponentType<{ className?: string }>
 }[] = [
-  {
-    id: "auto",
-    label: "Auto",
-    hint: "Person detection",
-    Icon: Sparkles,
-  },
-  {
-    id: "sam",
-    label: "Refine",
-    hint: "Pick the subject",
-    Icon: MousePointerClick,
-  },
+  { id: "auto", label: "Auto", Icon: Sparkles },
+  { id: "sam", label: "Custom", Icon: MousePointerClick },
 ]
 
 const OUTPUTS: { id: BackgroundOutputMode; label: string }[] = [
@@ -55,30 +42,20 @@ export function BackgroundSection({
   onChange,
   onOpenSubjectPicker,
   samAvailable = true,
-  alphaAvailable,
 }: Props) {
   function patch(p: Partial<BackgroundEffect>) {
     onChange({ ...value, ...p })
   }
 
-  // If user disables alpha output (mp4 selected), force transparent off.
-  React.useEffect(() => {
-    if (!alphaAvailable && value.output === "transparent") {
-      onChange({ ...value, output: "blur" })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alphaAvailable])
-
   return (
     <InspectorSection
-      title="Remove background"
-      description="Auto-detect or click the subject"
+      title="Background"
       enabled={value.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
     >
-      <FieldRow label="Subject">
+      <FieldRow label="Mask">
         <div className="grid grid-cols-2 gap-1.5">
-          {MODES.map(({ id, label, hint, Icon }) => {
+          {MODES.map(({ id, label, Icon }) => {
             const active = value.mode === id
             const disabled = id === "sam" && !samAvailable
             return (
@@ -88,61 +65,61 @@ export function BackgroundSection({
                 disabled={disabled}
                 onClick={() => patch({ mode: id })}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-all",
+                  "flex items-center justify-center gap-1.5 rounded border p-1.5 transition-all",
                   active
-                    ? "border-foreground bg-foreground/5"
-                    : "border-border/60 bg-background hover:border-border",
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/40 bg-background text-muted-foreground hover:border-border",
                   disabled && "cursor-not-allowed opacity-40"
                 )}
               >
-                <span className="flex w-full items-center justify-between">
-                  <Icon className="size-3.5" />
-                  <span className="text-xs font-medium">{label}</span>
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {hint}
-                </span>
+                <Icon className="size-3.5" />
+                <span className="text-[11px] font-medium">{label}</span>
               </button>
             )
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (value.mode !== "sam") patch({ mode: "sam" })
-            onOpenSubjectPicker()
-          }}
-          disabled={!samAvailable}
-          className="mt-2 flex h-9 items-center justify-center rounded-md border border-border/60 text-xs font-medium transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <MousePointerClick className="mr-1.5 size-3.5" />
-          {value.mode === "sam" ? "Refine subject" : "Pick subject"}
-        </button>
+        {value.mode === "sam" ? (
+          <button
+            type="button"
+            onClick={onOpenSubjectPicker}
+            disabled={!samAvailable}
+            className="mt-1.5 flex h-7 w-full items-center justify-center gap-1.5 rounded border border-border/40 bg-secondary/50 text-[11px] font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <MousePointerClick className="size-3" />
+            Pick Subject Points
+          </button>
+        ) : null}
+      </FieldRow>
+
+      <FieldRow label="Invert">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={value.invert_mask}
+            onChange={(e) => patch({ invert_mask: e.target.checked })}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-border/60 text-primary focus:ring-primary/20"
+          />
+          <span className="text-[11px] font-medium text-muted-foreground select-none">
+            Reverse mask
+          </span>
+        </label>
       </FieldRow>
 
       <FieldRow label="Output">
         <div className="grid grid-cols-3 gap-1">
           {OUTPUTS.map(({ id, label }) => {
             const active = value.output === id
-            const disabled = id === "transparent" && !alphaAvailable
             return (
               <button
                 key={id}
                 type="button"
-                disabled={disabled}
                 onClick={() => patch({ output: id })}
                 className={cn(
-                  "h-8 rounded-md border text-[11px] font-medium transition-all",
+                  "h-7 rounded border text-[10px] font-medium tracking-wider uppercase transition-all",
                   active
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border/60 hover:bg-foreground/5",
-                  disabled && "cursor-not-allowed opacity-40"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border/40 text-muted-foreground hover:border-border hover:bg-secondary/50"
                 )}
-                title={
-                  disabled
-                    ? "Switch output to WebM (alpha) to enable"
-                    : undefined
-                }
               >
                 {label}
               </button>

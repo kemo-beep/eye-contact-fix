@@ -30,8 +30,10 @@ export function Preview({
 }: PreviewProps) {
   if (job.status === "completed" && job.input_url && job.output_url) {
     return (
-      <div className="flex flex-col gap-3">
-        <BeforeAfter before={job.input_url} after={job.output_url} />
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className="min-h-0 flex-1">
+          <BeforeAfter before={job.input_url} after={job.output_url} />
+        </div>
         <p className="text-center text-xs text-muted-foreground">
           Drag the divider to compare. Press{" "}
           <kbd className="rounded bg-muted px-1 py-0.5">←</kbd> /{" "}
@@ -43,7 +45,7 @@ export function Preview({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <SinglePlayer
         src={job.input_url ?? ""}
         maskOverlayUrl={maskOverlayUrl}
@@ -92,7 +94,7 @@ function SinglePlayer({
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl">
+    <div className="relative h-full min-h-80 w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl">
       {src ? (
         <video
           ref={videoRef}

@@ -1,7 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { ArrowLeft, Check, Download, Loader2, RotateCcw } from "lucide-react"
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  Eye,
+  Loader2,
+  ScanFace,
+  Scissors,
+  RotateCcw,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useJobPolling } from "@/hooks/useJobPolling"
@@ -17,7 +26,7 @@ import {
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
-import { Inspector } from "./inspector"
+import { Inspector, type ToolId } from "./inspector"
 import { Preview } from "./preview"
 import { SubjectPicker } from "./subject-picker"
 
@@ -28,11 +37,36 @@ type EditorProps = {
 }
 
 const ACTIVE: ReadonlySet<Job["status"]> = new Set(["queued", "processing"])
+const TOOLS: {
+  id: ToolId
+  title: string
+  Icon: React.ComponentType<{ className?: string }>
+  active: (effects: EffectsPayload) => boolean
+}[] = [
+  {
+    id: "background",
+    title: "Remove BG",
+    Icon: Scissors,
+    active: (effects) => effects.background.enabled,
+  },
+  {
+    id: "beauty",
+    title: "Retouch",
+    Icon: ScanFace,
+    active: (effects) => effects.beauty.enabled,
+  },
+  {
+    id: "eye_contact",
+    title: "Eye Contact",
+    Icon: Eye,
+    active: (effects) => effects.eye_contact.enabled,
+  },
+]
 
 export function Editor({ initialJob, onExit }: EditorProps) {
   const [job, setJob] = React.useState<Job>(initialJob)
   const [effects, setEffects] = React.useState<EffectsPayload>(
-    initialJob.effects ?? DEFAULT_EFFECTS
+    normalizeEffects(initialJob.effects)
   )
   const [renderError, setRenderError] = React.useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = React.useState(false)
@@ -44,6 +78,12 @@ export function Editor({ initialJob, onExit }: EditorProps) {
   )
   const [maskLoading, setMaskLoading] = React.useState(false)
   const [maskError, setMaskError] = React.useState<string | null>(null)
+  const [selectedTool, setSelectedTool] = React.useState<ToolId>("eye_contact")
+  const autoRenderTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
+  const queuedRender = React.useRef<EffectsPayload | null>(null)
+  const renderBusy = React.useRef(false)
 
   const polledId = ACTIVE.has(job.status) ? job.id : null
   const polled = useJobPolling(polledId, 1500)
@@ -53,14 +93,56 @@ export function Editor({ initialJob, onExit }: EditorProps) {
   const completed = currentJob.status === "completed"
   const failed = currentJob.status === "failed"
 
-  async function handleRender() {
+  React.useEffect(() => {
+    const fresh = polled.job
+    if (!fresh) return
+    const id = window.setTimeout(() => setJob(fresh), 0)
+    return () => window.clearTimeout(id)
+  }, [polled.job])
+
+  React.useEffect(() => {
+    return () => {
+      if (autoRenderTimer.current) clearTimeout(autoRenderTimer.current)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (rendering || !queuedRender.current) return
+    const next = queuedRender.current
+    queuedRender.current = null
+    scheduleRender(next, 250)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rendering])
+
+  async function performRender(eff: EffectsPayload) {
+    if (renderBusy.current || ACTIVE.has(currentJob.status)) {
+      queuedRender.current = eff
+      return
+    }
+    renderBusy.current = true
     setRenderError(null)
     try {
-      const r = await renderJob(currentJob.id, effects)
+      const r = await renderJob(currentJob.id, eff)
       setJob(r.job)
     } catch (err) {
       setRenderError(err instanceof Error ? err.message : String(err))
+    } finally {
+      renderBusy.current = false
     }
+  }
+
+  async function handleRender() {
+    await performRender(effects)
+  }
+
+  function scheduleRender(eff: EffectsPayload, delay = 900) {
+    queuedRender.current = eff
+    if (autoRenderTimer.current) clearTimeout(autoRenderTimer.current)
+    autoRenderTimer.current = setTimeout(() => {
+      const next = queuedRender.current
+      queuedRender.current = null
+      if (next) void performRender(next)
+    }, delay)
   }
 
   async function pollForMask(startedAt: string | null) {
@@ -97,39 +179,40 @@ export function Editor({ initialJob, onExit }: EditorProps) {
     setEffects(next)
     if (enabledNow) void requestMaskPreview(points)
     if (openedPicker) setPickerOpen(true)
+    scheduleRender(next)
   }
 
   function handleApplyPoints(next: ClickPoint[]) {
     setPoints(next)
-    setEffects((prev) => ({
-      ...prev,
+    const nextEffects: EffectsPayload = {
+      ...effects,
       background: {
-        ...prev.background,
-        enabled: prev.background.enabled || next.length > 0,
-        mode: next.length > 0 ? "sam" : prev.background.mode,
+        ...effects.background,
+        enabled: effects.background.enabled || next.length > 0,
+        mode: next.length > 0 ? "sam" : "auto",
       },
-    }))
+    }
+    setEffects(nextEffects)
     if (next.length > 0) void requestMaskPreview(next)
+    scheduleRender(nextEffects, 250)
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Top toolbar */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card/60 px-5 py-3 shadow-sm backdrop-blur-xl transition-all">
-        <div className="flex items-center gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden w-full mx-auto max-w-5xl">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={onExit}
             disabled={rendering}
-            className="h-8 rounded-full px-4 text-xs font-medium"
+            className="h-8 px-2 text-xs"
           >
-            <ArrowLeft className="mr-1.5 size-3.5" />
+            <ArrowLeft className="size-3.5" />
             Back
           </Button>
-          <div className="h-4 w-px bg-border/60" />
-          <span className="hidden truncate text-sm font-medium text-foreground/80 sm:inline tracking-tight">
+          <span className="hidden truncate text-xs font-medium text-muted-foreground sm:inline">
             {currentJob.original_filename}
           </span>
         </div>
@@ -161,9 +244,9 @@ export function Editor({ initialJob, onExit }: EditorProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 min-[900px]:grid-cols-[minmax(0,1fr)_22rem] min-[900px]:items-start xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 min-[900px]:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
         {/* Preview pane */}
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <Preview
             job={currentJob}
             maskOverlayUrl={
@@ -199,6 +282,9 @@ export function Editor({ initialJob, onExit }: EditorProps) {
           {renderError ? (
             <p className="text-xs text-destructive">{renderError}</p>
           ) : null}
+          {maskError ? (
+            <p className="text-xs text-destructive">{maskError}</p>
+          ) : null}
         </div>
 
         {/* Inspector */}
@@ -206,11 +292,45 @@ export function Editor({ initialJob, onExit }: EditorProps) {
           effects={effects}
           onChange={handleEffectsChange}
           onOpenSubjectPicker={() => setPickerOpen(true)}
-          onRender={handleRender}
-          rendering={rendering}
+          selectedTool={selectedTool}
           samAvailable
-          hint={maskError ?? hintFor(effects, points.length)}
         />
+      </div>
+
+      <div className="rounded-lg border border-border/50 bg-card p-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {TOOLS.map(({ id, title, Icon, active }) => {
+            const isSelected = selectedTool === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedTool(id)}
+                className={cn(
+                  "flex items-center justify-between rounded-md border px-3 py-2 text-left transition-colors",
+                  isSelected
+                    ? "border-primary bg-primary/10"
+                    : "border-border/60 hover:border-border hover:bg-secondary/50"
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Icon className="size-4" />
+                  <span className="text-sm font-medium">{title}</span>
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                    active(effects)
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {active(effects) ? "On" : "Off"}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <SubjectPicker
@@ -222,6 +342,25 @@ export function Editor({ initialJob, onExit }: EditorProps) {
       />
     </div>
   )
+}
+
+function normalizeEffects(effects?: EffectsPayload | null): EffectsPayload {
+  return {
+    ...DEFAULT_EFFECTS,
+    ...effects,
+    eye_contact: {
+      ...DEFAULT_EFFECTS.eye_contact,
+      ...effects?.eye_contact,
+    },
+    beauty: {
+      ...DEFAULT_EFFECTS.beauty,
+      ...effects?.beauty,
+    },
+    background: {
+      ...DEFAULT_EFFECTS.background,
+      ...effects?.background,
+    },
+  }
 }
 
 function ResultBanner({ job }: { job: Job }) {
@@ -239,22 +378,4 @@ function ResultBanner({ job }: { job: Job }) {
       </span>
     </div>
   )
-}
-
-function hintFor(effects: EffectsPayload, pointCount: number): string | null {
-  if (
-    effects.background.enabled &&
-    effects.background.mode === "sam" &&
-    pointCount === 0
-  ) {
-    return 'Tip: click "Refine subject" to mark which person SAM2 should track.'
-  }
-  if (
-    effects.background.enabled &&
-    effects.background.output === "transparent" &&
-    effects.output_format !== "webm_alpha"
-  ) {
-    return "Switch the output to WebM to keep transparency."
-  }
-  return null
 }

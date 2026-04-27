@@ -30,8 +30,8 @@ export function InspectorSection({
   const headerId = id ?? `section-${title.replace(/\s+/g, "-").toLowerCase()}`
 
   return (
-    <section className="border-border/60 flex flex-col border-b last:border-b-0">
-      <header className="flex items-center justify-between gap-3 px-5 py-4">
+    <section className="flex flex-col border-b border-border/60 last:border-b-0">
+      <header className="flex items-center justify-between gap-2 px-3 py-2.5">
         <button
           type="button"
           onClick={() => setOpen((p) => !p)}
@@ -40,14 +40,14 @@ export function InspectorSection({
         >
           <ChevronDown
             className={cn(
-              "text-muted-foreground size-3.5 shrink-0 transition-transform",
+              "size-3.5 shrink-0 text-muted-foreground transition-transform",
               open ? "rotate-0" : "-rotate-90"
             )}
           />
           <div className="flex min-w-0 flex-col">
             <span className="text-sm font-medium tracking-tight">{title}</span>
             {description ? (
-              <span className="text-muted-foreground truncate text-xs">
+              <span className="truncate text-xs text-muted-foreground">
                 {description}
               </span>
             ) : null}
@@ -69,7 +69,7 @@ export function InspectorSection({
         <div className="overflow-hidden">
           <div
             className={cn(
-              "px-5 pb-5 transition-opacity",
+              "px-3 pb-3 transition-opacity",
               enabled ? "opacity-100" : "opacity-50"
             )}
           >
@@ -93,11 +93,11 @@ export function FieldRow({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1.5 py-1.5">
+    <div className="flex flex-col gap-1.5 py-1">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-xs font-medium">{label}</span>
         {value ? (
-          <span className="text-muted-foreground text-xs tabular-nums">
+          <span className="text-xs text-muted-foreground tabular-nums">
             {value}
           </span>
         ) : null}

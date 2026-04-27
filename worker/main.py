@@ -116,6 +116,7 @@ def _build_effects(
                 output=bg.get("output", "blur"),
                 color=bg.get("color") or "#000000",
                 blur_strength=int(bg.get("blur_strength", 25)),
+                invert_mask=bool(bg.get("invert_mask", False)),
                 sam_masks=sam_masks,
             )
         )

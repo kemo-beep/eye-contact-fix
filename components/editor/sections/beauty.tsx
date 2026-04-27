@@ -36,7 +36,6 @@ export function BeautySection({ value, onChange }: Props) {
   return (
     <InspectorSection
       title="Retouch"
-      description="Skin, teeth, eyes"
       enabled={value.enabled}
       onEnabledChange={(enabled) => onChange({ ...value, enabled })}
     >

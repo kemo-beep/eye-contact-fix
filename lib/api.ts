@@ -29,6 +29,7 @@ export type BackgroundEffect = {
   output: BackgroundOutputMode
   color: string
   blur_strength: number
+  invert_mask: boolean
 }
 
 export type EffectsPayload = {
@@ -94,6 +95,7 @@ export const DEFAULT_EFFECTS: EffectsPayload = {
     output: "blur",
     color: "#000000",
     blur_strength: 25,
+    invert_mask: false,
   },
   output_format: "mp4",
 }

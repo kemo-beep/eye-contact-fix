@@ -14,7 +14,6 @@ export function EyeContactSection({ value, onChange }: Props) {
   return (
     <InspectorSection
       title="Eye contact"
-      description="Warp the iris toward the camera"
       enabled={value.enabled}
       onEnabledChange={(enabled) => onChange({ ...value, enabled })}
     >
@@ -27,10 +26,6 @@ export function EyeContactSection({ value, onChange }: Props) {
           step={0.05}
         />
       </FieldRow>
-      <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
-        Try 80-100% for full correction. Above 110% can look uncanny on hard
-        side glances.
-      </p>
     </InspectorSection>
   )
 }

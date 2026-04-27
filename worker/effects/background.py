@@ -44,12 +44,14 @@ class BackgroundEffect:
         output: Literal["transparent", "color", "blur"] = "blur",
         color: str = "#000000",
         blur_strength: int = 25,
+        invert_mask: bool = False,
         sam_masks: Optional[Dict[int, np.ndarray]] = None,
     ) -> None:
         self.enabled = enabled
         self.mode = mode
         self.output = output
         self.color = color
+        self.invert_mask = invert_mask
         # Convert "0..99" UI scale to a Gaussian kernel size that's odd and >=3.
         k = max(3, int(blur_strength) | 1)
         self.kernel = (k, k)
@@ -81,9 +83,11 @@ class BackgroundEffect:
             if mask is None:
                 # If SAM2 didn't emit a mask for this frame (rare), fall through.
                 return None
-            return mask.astype(np.float32)
+            mask = mask.astype(np.float32)
+            return 1.0 - np.clip(mask, 0.0, 1.0) if self.invert_mask else mask
         if self._auto is not None and ctx.frame is not None:
-            return self._auto.segment(ctx.frame)
+            mask = self._auto.segment(ctx.frame)
+            return 1.0 - np.clip(mask, 0.0, 1.0) if self.invert_mask else mask
         return None
 
     # ---- composite --------------------------------------------------------

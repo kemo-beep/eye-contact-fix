@@ -1,13 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { ArrowUpRight, Film, Loader2, Upload, X } from "lucide-react"
+import { Film, Loader2, Upload, X } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { formatBytes, uploadVideo, type Job } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
-const ACCEPTED_TYPES = ["video/mp4", "video/quicktime", "video/x-matroska", "video/webm"]
+const ACCEPTED_TYPES = [
+  "video/mp4",
+  "video/quicktime",
+  "video/x-matroska",
+  "video/webm",
+]
 const MAX_BYTES = 200 * 1024 * 1024
 
 type UploadState =
@@ -22,12 +26,14 @@ type UploaderProps = {
 export function Uploader({ onUploaded }: UploaderProps) {
   const [file, setFile] = React.useState<File | null>(null)
   const [upload, setUpload] = React.useState<UploadState>({ kind: "idle" })
-  const [validationError, setValidationError] = React.useState<string | null>(null)
+  const [validationError, setValidationError] = React.useState<string | null>(
+    null
+  )
   const [isDragging, setIsDragging] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement | null>(null)
   const abortRef = React.useRef<AbortController | null>(null)
 
-  function pickFile(f: File | null) {
+  async function pickFile(f: File | null) {
     setValidationError(null)
     if (!f) {
       setFile(null)
@@ -44,6 +50,21 @@ export function Uploader({ onUploaded }: UploaderProps) {
       return
     }
     setFile(f)
+    setUpload({ kind: "uploading", pct: 0 })
+    abortRef.current = new AbortController()
+    try {
+      const { job } = await uploadVideo(
+        f,
+        (pct) => setUpload({ kind: "uploading", pct }),
+        abortRef.current.signal
+      )
+      onUploaded(job)
+    } catch (err) {
+      setUpload({
+        kind: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
   }
 
   function reset() {
@@ -55,28 +76,6 @@ export function Uploader({ onUploaded }: UploaderProps) {
     if (inputRef.current) inputRef.current.value = ""
   }
 
-  async function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault()
-    if (!file) return
-    setValidationError(null)
-    setUpload({ kind: "uploading", pct: 0 })
-    abortRef.current = new AbortController()
-    try {
-      const { job } = await uploadVideo(
-        file,
-        (pct) => setUpload({ kind: "uploading", pct }),
-        abortRef.current.signal
-      )
-      onUploaded(job)
-      // Don't reset state — the parent will swap the UI to the editor.
-    } catch (err) {
-      setUpload({
-        kind: "failed",
-        error: err instanceof Error ? err.message : String(err),
-      })
-    }
-  }
-
   function onDrop(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault()
     setIsDragging(false)
@@ -86,38 +85,40 @@ export function Uploader({ onUploaded }: UploaderProps) {
 
   if (upload.kind === "uploading") {
     return (
-      <div className="bg-card flex flex-col gap-5 rounded-lg border p-5 sm:p-6">
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
         <div className="flex items-baseline justify-between gap-4">
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs tracking-wider text-muted-foreground uppercase">
               Uploading
             </span>
             {file ? (
               <span className="truncate text-sm font-medium">{file.name}</span>
             ) : null}
           </div>
-          <span className="text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
+          <span className="text-2xl font-semibold tracking-tight tabular-nums">
             {Math.round(upload.pct)}
-            <span className="text-muted-foreground text-base font-normal">%</span>
+            <span className="text-base font-normal text-muted-foreground">
+              %
+            </span>
           </span>
         </div>
 
-        <div className="bg-muted relative h-1.5 w-full overflow-hidden rounded-full">
+        <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className="bg-foreground h-full rounded-full transition-[width] duration-500 ease-out"
+            className="h-full rounded-full bg-foreground transition-[width] duration-500 ease-out"
             style={{ width: `${upload.pct}%` }}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-xs inline-flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="size-3 animate-spin" />
             Sending to storage
           </span>
           <button
             type="button"
             onClick={reset}
-            className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 transition-colors hover:underline"
+            className="text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >
             Cancel
           </button>
@@ -127,7 +128,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <label
         htmlFor="video-input"
         onDragEnter={(e) => {
@@ -141,20 +142,20 @@ export function Uploader({ onUploaded }: UploaderProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-10 text-center transition-all duration-300 sm:p-12",
-          "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xl hover:shadow-primary/5",
-          isDragging && "border-primary bg-primary/10 scale-[1.02]",
-          file && "border-solid border-foreground/20 bg-background/50 backdrop-blur-sm"
+          "group relative flex cursor-pointer items-center justify-center gap-3 rounded-lg border border-dashed p-6 text-center transition-colors sm:p-8",
+          "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5",
+          isDragging && "border-primary bg-primary/10",
+          file && "border-solid border-foreground/20 bg-background/50"
         )}
       >
         {file ? (
           <>
-            <div className="bg-foreground/4 flex size-10 items-center justify-center rounded-md">
+            <div className="flex size-9 items-center justify-center rounded-md bg-foreground/5">
               <Film className="size-5" />
             </div>
             <div className="flex flex-col items-center gap-1">
               <span className="text-sm font-medium">{file.name}</span>
-              <span className="text-muted-foreground text-xs">
+              <span className="text-xs text-muted-foreground">
                 {formatBytes(file.size)}
               </span>
             </div>
@@ -163,20 +164,20 @@ export function Uploader({ onUploaded }: UploaderProps) {
           <>
             <div
               className={cn(
-                "flex size-14 items-center justify-center rounded-full transition-all duration-300",
+                "flex size-10 items-center justify-center rounded-md transition-colors",
                 isDragging
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground group-hover:bg-primary/10 group-hover:text-primary"
               )}
             >
-              <Upload className="size-6" />
+              <Upload className="size-5" />
             </div>
-            <div className="flex flex-col gap-1.5 mt-2">
-              <span className="text-lg font-medium tracking-tight">
-                Drop your video here
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium tracking-tight">
+                Drop video
               </span>
-              <span className="text-muted-foreground text-sm">
-                Click to browse • MP4, MOV, MKV, WebM (max {formatBytes(MAX_BYTES)})
+              <span className="text-xs text-muted-foreground">
+                MP4, MOV, MKV, WebM · {formatBytes(MAX_BYTES)}
               </span>
             </div>
           </>
@@ -192,7 +193,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
       </label>
 
       {validationError || upload.kind === "failed" ? (
-        <div className="text-destructive flex items-start gap-2 text-sm">
+        <div className="flex items-start gap-2 text-xs text-destructive">
           <X className="mt-0.5 size-4 shrink-0" />
           <span className="wrap-break-word">
             {validationError ||
@@ -200,18 +201,6 @@ export function Uploader({ onUploaded }: UploaderProps) {
           </span>
         </div>
       ) : null}
-
-      <div className="flex items-center justify-end gap-2 pt-1">
-        {file ? (
-          <Button type="button" variant="ghost" size="sm" onClick={reset}>
-            Clear
-          </Button>
-        ) : null}
-        <Button type="submit" disabled={!file} size="lg">
-          Continue
-          <ArrowUpRight />
-        </Button>
-      </div>
-    </form>
+    </div>
   )
 }

@@ -44,6 +44,7 @@ class BackgroundEffect(BaseModel):
     output: Literal["transparent", "color", "blur"] = "blur"
     color: Optional[str] = "#000000"
     blur_strength: int = Field(default=25, ge=1, le=99)
+    invert_mask: bool = False
 
 
 class EffectsPayload(BaseModel):

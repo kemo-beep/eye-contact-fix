@@ -2,7 +2,15 @@
 
 import * as React from "react"
 import { Dialog } from "@base-ui/react/dialog"
-import { Loader2, Trash2, X } from "lucide-react"
+import {
+  Check,
+  Eraser,
+  Loader2,
+  MousePointerClick,
+  Trash2,
+  Undo2,
+  X,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -43,6 +51,7 @@ export function SubjectPicker({
   const [maskLoading, setMaskLoading] = React.useState(false)
   const [applying, setApplying] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [labelMode, setLabelMode] = React.useState<0 | 1>(1)
   const [frameBox, setFrameBox] = React.useState<{
     left: number
     top: number
@@ -176,8 +185,12 @@ export function SubjectPicker({
     if (px < 0 || py < 0 || px > frameBox.w || py > frameBox.h) return
     const x = (px / frameBox.w) * imgSize.w
     const y = (py / frameBox.h) * imgSize.h
-    const label: 0 | 1 = e.metaKey || e.ctrlKey || e.shiftKey ? 0 : 1
+    const label: 0 | 1 = e.metaKey || e.ctrlKey || e.shiftKey ? 0 : labelMode
     setPoints((prev) => [...prev, { x, y, label }])
+  }
+
+  function undoPoint() {
+    setPoints((prev) => prev.slice(0, -1))
   }
 
   function clearPoints() {
@@ -208,13 +221,11 @@ export function SubjectPicker({
         <Dialog.Backdrop className="fixed inset-0 bg-black/50 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 grid w-[calc(100vw-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-card p-4 shadow-lg sm:p-5">
           <header className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <MousePointerClick className="size-4" />
               <Dialog.Title className="text-base font-semibold tracking-tight">
-                Pick the subject
+                Refine mask
               </Dialog.Title>
-              <Dialog.Description className="text-xs text-muted-foreground">
-                Click the subject. Cmd-click marks background.
-              </Dialog.Description>
             </div>
             <Dialog.Close
               aria-label="Close"
@@ -223,6 +234,35 @@ export function SubjectPicker({
               <X className="size-4" />
             </Dialog.Close>
           </header>
+
+          <div className="grid grid-cols-2 gap-1 rounded border border-border/50 bg-muted/40 p-1">
+            <button
+              type="button"
+              onClick={() => setLabelMode(1)}
+              className={cn(
+                "h-8 rounded text-xs font-medium",
+                labelMode === 1
+                  ? "bg-emerald-500 text-white"
+                  : "text-muted-foreground hover:bg-background"
+              )}
+            >
+              <MousePointerClick className="mr-1 inline size-3" />
+              Subject
+            </button>
+            <button
+              type="button"
+              onClick={() => setLabelMode(0)}
+              className={cn(
+                "h-8 rounded text-xs font-medium",
+                labelMode === 0
+                  ? "bg-rose-500 text-white"
+                  : "text-muted-foreground hover:bg-background"
+              )}
+            >
+              <Eraser className="mr-1 inline size-3" />
+              Cut
+            </button>
+          </div>
 
           <div
             ref={frameRef}
@@ -291,17 +331,26 @@ export function SubjectPicker({
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-emerald-500" />
-                Subject ({points.filter((p) => p.label === 1).length})
+                {points.filter((p) => p.label === 1).length}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-rose-500" />
-                Background ({points.filter((p) => p.label === 0).length})
+                {points.filter((p) => p.label === 0).length}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={undoPoint}
+                disabled={points.length === 0}
+              >
+                <Undo2 />
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -310,7 +359,6 @@ export function SubjectPicker({
                 disabled={points.length === 0}
               >
                 <Trash2 />
-                Clear
               </Button>
               <Button
                 type="button"
@@ -319,7 +367,8 @@ export function SubjectPicker({
                 disabled={applying}
               >
                 {applying ? <Loader2 className="animate-spin" /> : null}
-                Use selection
+                <Check />
+                Apply
               </Button>
             </div>
           </div>
