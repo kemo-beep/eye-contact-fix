@@ -28,7 +28,7 @@ export function EyeContactSection({ value, onChange }: Props) {
         />
       </FieldRow>
       <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
-        Try 80–100% for full correction. Above 110% can look uncanny on hard
+        Try 80-100% for full correction. Above 110% can look uncanny on hard
         side glances.
       </p>
     </InspectorSection>

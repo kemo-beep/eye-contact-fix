@@ -47,7 +47,7 @@ export function BeautySection({ value, onChange }: Props) {
             type="button"
             onClick={() => onChange({ ...value, ...PRESETS[name] })}
             className={cn(
-              "h-7 rounded-full px-3 text-xs font-medium transition-colors",
+              "h-7 rounded px-3 text-xs font-medium transition-colors",
               current === name
                 ? "bg-foreground text-background"
                 : "bg-foreground/5 text-foreground hover:bg-foreground/10"

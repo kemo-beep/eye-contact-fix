@@ -121,6 +121,20 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+async function retry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      last = err
+      if (i === attempts - 1) break
+      await new Promise((resolve) => setTimeout(resolve, 450 * (i + 1)))
+    }
+  }
+  throw last
+}
+
 export async function uploadVideo(
   file: File,
   onProgress?: (pct: number) => void,
@@ -148,7 +162,11 @@ export async function uploadVideo(
         const detail =
           (xhr.response && xhr.response.detail) ||
           `${xhr.status} ${xhr.statusText}`
-        reject(new Error(typeof detail === "string" ? detail : JSON.stringify(detail)))
+        reject(
+          new Error(
+            typeof detail === "string" ? detail : JSON.stringify(detail)
+          )
+        )
       }
     }
 
@@ -159,20 +177,30 @@ export async function uploadVideo(
   })
 }
 
-export async function getJob(jobId: string, signal?: AbortSignal): Promise<Job> {
-  const res = await fetch(apiUrl(`/jobs/${jobId}`), {
-    cache: "no-store",
-    signal,
+export async function getJob(
+  jobId: string,
+  signal?: AbortSignal
+): Promise<Job> {
+  return retry(async () => {
+    const res = await fetch(apiUrl(`/jobs/${jobId}`), {
+      cache: "no-store",
+      signal,
+    })
+    return handle<Job>(res)
   })
-  return handle<Job>(res)
 }
 
-export async function listJobs(limit = 10, signal?: AbortSignal): Promise<JobList> {
-  const res = await fetch(apiUrl(`/jobs?limit=${limit}`), {
-    cache: "no-store",
-    signal,
+export async function listJobs(
+  limit = 10,
+  signal?: AbortSignal
+): Promise<JobList> {
+  return retry(async () => {
+    const res = await fetch(apiUrl(`/jobs?limit=${limit}`), {
+      cache: "no-store",
+      signal,
+    })
+    return handle<JobList>(res)
   })
-  return handle<JobList>(res)
 }
 
 export async function renderJob(

@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 
 type PreviewProps = {
   job: Job
+  maskOverlayUrl?: string | null
+  maskLoading?: boolean
   /** A status banner to overlay (e.g. "Rendering — 35%"). */
   statusOverlay?: React.ReactNode
 }
@@ -20,15 +22,21 @@ type PreviewProps = {
  * - For COMPLETED: shows the BeforeAfter comparison slider.
  * - For FAILED: shows the input with the error in the overlay.
  */
-export function Preview({ job, statusOverlay }: PreviewProps) {
+export function Preview({
+  job,
+  maskOverlayUrl,
+  maskLoading,
+  statusOverlay,
+}: PreviewProps) {
   if (job.status === "completed" && job.input_url && job.output_url) {
     return (
       <div className="flex flex-col gap-3">
         <BeforeAfter before={job.input_url} after={job.output_url} />
-        <p className="text-muted-foreground text-center text-xs">
+        <p className="text-center text-xs text-muted-foreground">
           Drag the divider to compare. Press{" "}
-          <kbd className="bg-muted rounded px-1 py-0.5">←</kbd> /{" "}
-          <kbd className="bg-muted rounded px-1 py-0.5">→</kbd> for fine control.
+          <kbd className="rounded bg-muted px-1 py-0.5">←</kbd> /{" "}
+          <kbd className="rounded bg-muted px-1 py-0.5">→</kbd> for fine
+          control.
         </p>
       </div>
     )
@@ -36,16 +44,25 @@ export function Preview({ job, statusOverlay }: PreviewProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <SinglePlayer src={job.input_url ?? ""} overlay={statusOverlay} />
+      <SinglePlayer
+        src={job.input_url ?? ""}
+        maskOverlayUrl={maskOverlayUrl}
+        maskLoading={maskLoading}
+        overlay={statusOverlay}
+      />
     </div>
   )
 }
 
 function SinglePlayer({
   src,
+  maskOverlayUrl,
+  maskLoading,
   overlay,
 }: {
   src: string
+  maskOverlayUrl?: string | null
+  maskLoading?: boolean
   overlay?: React.ReactNode
 }) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -75,7 +92,7 @@ function SinglePlayer({
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
       {src ? (
         <video
           ref={videoRef}
@@ -100,7 +117,7 @@ function SinglePlayer({
             playing ? "opacity-0 hover:opacity-100" : "opacity-100"
           )}
         >
-          <span className="flex size-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg backdrop-blur transition-transform hover:scale-105">
+          <span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur transition-transform hover:scale-105">
             {playing ? (
               <Pause className="size-5" />
             ) : (
@@ -108,6 +125,22 @@ function SinglePlayer({
             )}
           </span>
         </button>
+      ) : null}
+
+      {maskOverlayUrl ? (
+        <img
+          src={maskOverlayUrl}
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-80 mix-blend-screen"
+        />
+      ) : null}
+
+      {maskLoading ? (
+        <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded bg-black/70 px-2.5 py-1 text-[11px] text-white">
+          <Loader2 className="size-3 animate-spin" />
+          Selecting
+        </div>
       ) : null}
 
       {overlay ? (

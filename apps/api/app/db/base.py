@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
-from typing import AsyncGenerator
+from collections.abc import Awaitable, Callable
+from typing import AsyncGenerator, TypeVar
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -11,10 +13,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class Base(DeclarativeBase):
@@ -27,7 +31,7 @@ class Base(DeclarativeBase):
 engine = create_async_engine(
     settings.async_database_url,
     echo=False,
-    pool_pre_ping=True,
+    poolclass=NullPool,
     future=True,
     connect_args={"statement_cache_size": 0},
 )
@@ -43,6 +47,34 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency yielding an async session."""
     async with AsyncSessionLocal() as session:
         yield session
+
+
+def _is_invalid_cached_statement(exc: BaseException) -> bool:
+    return "InvalidCachedStatementError" in repr(exc)
+
+
+async def with_stale_statement_retry(
+    fn: Callable[[AsyncSession], Awaitable[T]],
+    session: AsyncSession | None = None,
+    attempts: int = 3,
+) -> T:
+    """Retry after asyncpg invalidates a prepared plan during boot DDL."""
+    max_attempts = max(1, attempts)
+    for attempt in range(max_attempts):
+        active_session = session if attempt == 0 and session is not None else AsyncSessionLocal()
+        owns_session = active_session is not session
+        try:
+            return await fn(active_session)
+        except SQLAlchemyError as exc:
+            if not _is_invalid_cached_statement(exc) or attempt == max_attempts - 1:
+                raise
+            logger.info("Stale asyncpg statement plan detected; retrying on fresh session")
+            await active_session.rollback()
+            await engine.dispose()
+        finally:
+            if owns_session:
+                await active_session.close()
+    raise RuntimeError("unreachable stale statement retry state")
 
 
 # Idempotent migrations applied at startup. We don't have Alembic configured yet

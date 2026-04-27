@@ -88,32 +88,36 @@ export function BackgroundSection({
                 disabled={disabled}
                 onClick={() => patch({ mode: id })}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-all",
+                  "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-all",
                   active
                     ? "border-foreground bg-foreground/5"
-                    : "border-border/60 hover:border-border bg-background",
-                  disabled && "opacity-40 cursor-not-allowed"
+                    : "border-border/60 bg-background hover:border-border",
+                  disabled && "cursor-not-allowed opacity-40"
                 )}
               >
                 <span className="flex w-full items-center justify-between">
                   <Icon className="size-3.5" />
                   <span className="text-xs font-medium">{label}</span>
                 </span>
-                <span className="text-muted-foreground text-[11px]">{hint}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {hint}
+                </span>
               </button>
             )
           })}
         </div>
-        {value.mode === "sam" ? (
-          <button
-            type="button"
-            onClick={onOpenSubjectPicker}
-            className="border-border/60 hover:bg-foreground/5 mt-2 flex h-9 items-center justify-center rounded-xl border text-xs font-medium transition-colors"
-          >
-            <MousePointerClick className="size-3.5 mr-1.5" />
-            Refine subject
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            if (value.mode !== "sam") patch({ mode: "sam" })
+            onOpenSubjectPicker()
+          }}
+          disabled={!samAvailable}
+          className="mt-2 flex h-9 items-center justify-center rounded-md border border-border/60 text-xs font-medium transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <MousePointerClick className="mr-1.5 size-3.5" />
+          {value.mode === "sam" ? "Refine subject" : "Pick subject"}
+        </button>
       </FieldRow>
 
       <FieldRow label="Output">
@@ -128,14 +132,16 @@ export function BackgroundSection({
                 disabled={disabled}
                 onClick={() => patch({ output: id })}
                 className={cn(
-                  "h-8 rounded-lg border text-[11px] font-medium transition-all",
+                  "h-8 rounded-md border text-[11px] font-medium transition-all",
                   active
                     ? "border-foreground bg-foreground text-background"
                     : "border-border/60 hover:bg-foreground/5",
                   disabled && "cursor-not-allowed opacity-40"
                 )}
                 title={
-                  disabled ? "Switch output to WebM (alpha) to enable" : undefined
+                  disabled
+                    ? "Switch output to WebM (alpha) to enable"
+                    : undefined
                 }
               >
                 {label}
@@ -152,14 +158,14 @@ export function BackgroundSection({
               type="color"
               value={value.color}
               onChange={(e) => patch({ color: e.target.value })}
-              className="border-border/60 h-9 w-12 cursor-pointer rounded-lg border bg-transparent p-1"
+              className="h-9 w-12 cursor-pointer rounded-md border border-border/60 bg-transparent p-1"
             />
             <input
               type="text"
               value={value.color}
               onChange={(e) => patch({ color: e.target.value })}
               spellCheck={false}
-              className="border-border/60 bg-background h-9 w-full rounded-lg border px-2 text-xs font-mono uppercase tracking-tight outline-none focus-visible:border-foreground"
+              className="h-9 w-full rounded-md border border-border/60 bg-background px-2 font-mono text-xs tracking-tight uppercase outline-none focus-visible:border-foreground"
             />
           </div>
         </FieldRow>
@@ -178,9 +184,8 @@ export function BackgroundSection({
       ) : null}
 
       {value.output === "transparent" ? (
-        <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-          Output will be a WebM with VP9 alpha — drop it into your editor and the
-          subject will float on whatever you composite under it.
+        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+          WebM alpha output.
         </p>
       ) : null}
     </InspectorSection>

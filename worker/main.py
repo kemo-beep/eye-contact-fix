@@ -431,6 +431,19 @@ def _maybe_run_sam_propagation(
 # ---------------------------------------------------------------------------
 
 
+def _auto_preview_mask(frame_bgr: Any) -> Any:
+    import numpy as np
+
+    from worker.segmentation.auto import AutoSegmenter
+
+    seg = AutoSegmenter()
+    try:
+        soft = seg.segment(frame_bgr)
+    finally:
+        seg.close()
+    return (soft > 0.5).astype(np.uint8) * 255
+
+
 def process_mask_preview(
     job_id_str: str,
     frame_time: float,
@@ -486,23 +499,19 @@ def process_mask_preview(
         pts = [(float(p["x"]), float(p["y"])) for p in points]
         labels = [int(p.get("label", 1)) for p in points]
 
-        try:
-            from worker.segmentation import sam_video
-
-            mask = sam_video.predict_image_mask(frame_bgr, pts, labels)
-        except Exception as sam_exc:
-            logger.warning(
-                "SAM2 not available for mask preview (%s); using MediaPipe Selfie.",
-                sam_exc,
-            )
-            from worker.segmentation.auto import AutoSegmenter
-
-            seg = AutoSegmenter()
+        if pts:
             try:
-                soft = seg.segment(frame_bgr)
-            finally:
-                seg.close()
-            mask = (soft > 0.5).astype("uint8") * 255
+                from worker.segmentation import sam_video
+
+                mask = sam_video.predict_image_mask(frame_bgr, pts, labels)
+            except Exception as sam_exc:
+                logger.warning(
+                    "SAM2 preview unavailable (%s); using automatic subject mask.",
+                    sam_exc,
+                )
+                mask = _auto_preview_mask(frame_bgr)
+        else:
+            mask = _auto_preview_mask(frame_bgr)
 
         # Build a translucent green overlay PNG: visible mask area in green.
         overlay = np.zeros((*mask.shape, 4), dtype=np.uint8)

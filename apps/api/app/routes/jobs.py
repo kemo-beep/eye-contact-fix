@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import get_session
+from app.db.base import get_session, with_stale_statement_retry
 from app.models.job import Job, JobStatus
 from app.schemas.job import (
     JobCreateResponse,
@@ -32,14 +32,17 @@ _RENDERABLE = {JobStatus.DRAFT, JobStatus.UPLOADED, JobStatus.FAILED, JobStatus.
 
 @router.get("", response_model=JobList, summary="List jobs (most recent first)")
 async def list_jobs(
-    session: Annotated[AsyncSession, Depends(get_session)],
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> JobList:
-    total = await session.scalar(select(func.count()).select_from(Job)) or 0
-    rows = await session.scalars(
-        select(Job).order_by(Job.created_at.desc()).limit(limit).offset(offset)
-    )
+    async def query(session: AsyncSession) -> tuple[int, list[Job]]:
+        total = await session.scalar(select(func.count()).select_from(Job)) or 0
+        rows = await session.scalars(
+            select(Job).order_by(Job.created_at.desc()).limit(limit).offset(offset)
+        )
+        return int(total), list(rows)
+
+    total, rows = await with_stale_statement_retry(query)
     return JobList(items=[JobRead.model_validate(j) for j in rows], total=int(total))
 
 
@@ -78,7 +81,9 @@ async def render_job(
             detail="Job has no input video to render",
         )
 
-    effects = payload.effects.model_dump()
+    # JSON mode so RQ/pickle on the worker never sees app.* Enum instances
+    # (ModuleNotFoundError: app in the worker container).
+    effects = payload.effects.model_dump(mode="json")
 
     # Validate the transparent + format combo here so the worker can trust it.
     bg = effects.get("background", {})

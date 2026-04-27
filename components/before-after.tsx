@@ -96,7 +96,7 @@ export function BeforeAfter({ before, after, className }: Props) {
     <div
       ref={containerRef}
       className={cn(
-        "relative aspect-video w-full overflow-hidden rounded-2xl bg-black select-none",
+        "relative aspect-video w-full overflow-hidden rounded-lg bg-black select-none",
         className
       )}
       onPointerMove={onPointerMove}
@@ -135,7 +135,7 @@ export function BeforeAfter({ before, after, className }: Props) {
           playing ? "opacity-0 hover:opacity-100" : "opacity-100"
         )}
       >
-        <span className="flex size-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg backdrop-blur transition-transform hover:scale-105">
+        <span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur transition-transform hover:scale-105">
           {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
         </span>
       </button>
@@ -162,7 +162,7 @@ export function BeforeAfter({ before, after, className }: Props) {
         className="absolute top-0 bottom-0 w-1 -translate-x-1/2 cursor-ew-resize bg-white/90 outline-none ring-0"
         style={{ left: `${pos}%` }}
       >
-        <div className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_2px_12px_rgba(0,0,0,0.35)]">
+        <div className="absolute left-1/2 top-1/2 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white">
           <svg
             width="18"
             height="18"

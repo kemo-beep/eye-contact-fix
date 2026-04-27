@@ -86,7 +86,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
 
   if (upload.kind === "uploading") {
     return (
-      <div className="bg-card flex flex-col gap-6 rounded-3xl border p-8 sm:p-10">
+      <div className="bg-card flex flex-col gap-5 rounded-lg border p-5 sm:p-6">
         <div className="flex items-baseline justify-between gap-4">
           <div className="flex flex-col gap-1.5 min-w-0">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">
@@ -96,7 +96,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
               <span className="truncate text-sm font-medium">{file.name}</span>
             ) : null}
           </div>
-          <span className="text-3xl font-semibold tabular-nums tracking-tight sm:text-4xl">
+          <span className="text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
             {Math.round(upload.pct)}
             <span className="text-muted-foreground text-base font-normal">%</span>
           </span>
@@ -141,7 +141,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border border-dashed p-12 text-center transition-all sm:p-16",
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center transition-all sm:p-10",
           "border-border/80 bg-card hover:border-foreground/40",
           isDragging && "border-primary bg-primary/5",
           file && "border-solid border-foreground/15"
@@ -149,7 +149,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
       >
         {file ? (
           <>
-            <div className="bg-foreground/4 flex size-12 items-center justify-center rounded-2xl">
+            <div className="bg-foreground/4 flex size-10 items-center justify-center rounded-md">
               <Film className="size-5" />
             </div>
             <div className="flex flex-col items-center gap-1">
@@ -163,7 +163,7 @@ export function Uploader({ onUploaded }: UploaderProps) {
           <>
             <div
               className={cn(
-                "flex size-14 items-center justify-center rounded-2xl transition-all",
+                "flex size-11 items-center justify-center rounded-md transition-all",
                 isDragging
                   ? "bg-primary/15 text-primary"
                   : "bg-foreground/4 text-foreground group-hover:bg-foreground/8"

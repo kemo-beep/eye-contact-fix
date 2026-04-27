@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 const POLL_MS = 4000
 
-export function RecentJobs() {
+export function RecentJobs({ onSelect }: { onSelect?: (job: Job) => void }) {
   const [items, setItems] = React.useState<Job[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -55,25 +55,33 @@ export function RecentJobs() {
         ) : null}
       </div>
 
+      {error ? (
+        <p className="text-muted-foreground text-xs">Recent jobs are unavailable.</p>
+      ) : null}
+
       <ul className="divide-border/60 divide-y border-y">
-        {items?.map((j) => <JobRow key={j.id} job={j} />)}
+        {items?.map((j) => <JobRow key={j.id} job={j} onSelect={onSelect} />)}
       </ul>
     </section>
   )
 }
 
-function JobRow({ job }: { job: Job }) {
+function JobRow({ job, onSelect }: { job: Job; onSelect?: (job: Job) => void }) {
   const isDone = job.status === "completed"
   return (
-    <li className="group flex items-center justify-between gap-3 py-3">
-      <div className="flex min-w-0 flex-col gap-0.5">
+    <li className="group flex items-center justify-between gap-3 py-2.5">
+      <button
+        type="button"
+        onClick={() => onSelect?.(job)}
+        className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+      >
         <span className="truncate text-sm font-medium">
           {job.original_filename}
         </span>
         <span className="text-muted-foreground text-xs">
           {timeAgo(job.created_at)}
         </span>
-      </div>
+      </button>
       <div className="flex items-center gap-3">
         <StatusLabel status={job.status} progress={job.progress} />
         {isDone ? (
@@ -81,8 +89,9 @@ function JobRow({ job }: { job: Job }) {
             href={downloadUrl(job.id)}
             target="_blank"
             rel="noreferrer"
-            className="text-muted-foreground hover:text-foreground hover:bg-foreground/6 inline-flex size-7 items-center justify-center rounded-full transition-colors"
+            className="text-muted-foreground hover:text-foreground hover:bg-foreground/6 inline-flex size-7 items-center justify-center rounded transition-colors"
             aria-label="Download"
+            onClick={(e) => e.stopPropagation()}
           >
             <ArrowRight className="size-3.5" />
           </a>

@@ -83,14 +83,19 @@ class Settings(BaseSettings):
         parsed = urlparse(url)
         query_items = parse_qsl(parsed.query, keep_blank_values=True)
         normalized_query: list[tuple[str, str]] = []
+        seen: set[str] = set()
         drop_for_asyncpg = {"channel_binding", "gssencmode", "target_session_attrs"}
         for key, value in query_items:
             if key in drop_for_asyncpg:
                 continue
             if key == "sslmode":
                 normalized_query.append(("ssl", value))
+                seen.add("ssl")
             else:
                 normalized_query.append((key, value))
+                seen.add(key)
+        if "prepared_statement_cache_size" not in seen:
+            normalized_query.append(("prepared_statement_cache_size", "0"))
         return urlunparse(parsed._replace(query=urlencode(normalized_query)))
 
 

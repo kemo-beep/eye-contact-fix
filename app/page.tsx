@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import { Editor } from "@/components/editor/editor"
 import { RecentJobs } from "@/components/recent-jobs"
@@ -15,10 +16,10 @@ export default function Page() {
     return (
       <main className="bg-background relative min-h-svh">
         <header className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-5">
-          <a href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <Logo />
             <span className="text-sm font-medium tracking-tight">EyeContact</span>
-          </a>
+          </Link>
           <ThemeToggle />
         </header>
 
@@ -40,10 +41,10 @@ export default function Page() {
       />
 
       <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-        <a href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <Logo />
           <span className="text-sm font-medium tracking-tight">EyeContact</span>
-        </a>
+        </Link>
         <ThemeToggle />
       </header>
 
@@ -62,7 +63,7 @@ export default function Page() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 pb-24">
-        <RecentJobs />
+        <RecentJobs onSelect={setActiveJob} />
       </section>
     </main>
   )

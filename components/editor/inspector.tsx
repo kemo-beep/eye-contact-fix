@@ -48,13 +48,13 @@ export function Inspector({
     Number(effects.background.enabled)
 
   return (
-    <aside className="bg-card border-border/60 flex h-full max-h-[calc(100dvh-7rem)] min-h-[36rem] flex-col overflow-hidden rounded-3xl border">
-      <header className="border-border/60 flex items-center justify-between gap-2 border-b px-5 py-3.5">
+    <aside className="flex h-full max-h-[calc(100dvh-7rem)] min-h-[34rem] flex-col overflow-hidden rounded-lg border border-border/60 bg-card min-[900px]:sticky min-[900px]:top-4">
+      <header className="flex items-center justify-between gap-2 border-b border-border/60 px-5 py-3.5">
         <div className="flex items-center gap-2">
           <Sparkles className="size-3.5" />
           <span className="text-sm font-semibold tracking-tight">Effects</span>
         </div>
-        <span className="text-muted-foreground text-[11px] tabular-nums">
+        <span className="text-[11px] text-muted-foreground tabular-nums">
           {enabledCount} active
         </span>
       </header>
@@ -77,7 +77,7 @@ export function Inspector({
         />
 
         <section className="border-border/60 px-5 py-4">
-          <span className="text-muted-foreground mb-2 block text-[11px] uppercase tracking-wider">
+          <span className="mb-2 block text-[11px] tracking-wider text-muted-foreground uppercase">
             Output format
           </span>
           <div className="grid grid-cols-2 gap-1.5">
@@ -89,14 +89,14 @@ export function Inspector({
                   type="button"
                   onClick={() => patch({ output_format: f.id })}
                   className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition-all",
+                    "flex flex-col items-start gap-0.5 rounded-md border p-2.5 text-left transition-all",
                     active
                       ? "border-foreground bg-foreground/5"
-                      : "border-border/60 hover:border-border bg-background"
+                      : "border-border/60 bg-background hover:border-border"
                   )}
                 >
                   <span className="text-xs font-medium">{f.label}</span>
-                  <span className="text-muted-foreground text-[11px]">
+                  <span className="text-[11px] text-muted-foreground">
                     {f.sub}
                   </span>
                 </button>
@@ -106,9 +106,9 @@ export function Inspector({
         </section>
       </div>
 
-      <footer className="border-border/60 sticky bottom-0 flex flex-col gap-2 border-t bg-card/95 backdrop-blur p-4">
+      <footer className="sticky bottom-0 flex flex-col gap-2 border-t border-border/60 bg-card/95 p-4 backdrop-blur">
         {hint ? (
-          <p className="text-muted-foreground text-[11px] leading-relaxed">
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
             {hint}
           </p>
         ) : null}
