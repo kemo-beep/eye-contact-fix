@@ -1,0 +1,94 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_NAME: ${QUEUE_NAME:-eyecontact}
+      MASK_QUEUE_NAME: ${MASK_QUEUE_NAME:-eyecontact-fast}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-eyecontact}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3004}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-209715200}
+      PREVIEW_CACHE_DIR: /tmp/eyecontact-preview
+    volumes:
+      - api_preview_cache:/tmp/eyecontact-preview
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./worker
+      args:
+        # Set to 1 to install torch + sam2 (~1.5GB extra) for the
+        # click-to-select subject picker. Default off.
+        INSTALL_SAM2: ${INSTALL_SAM2:-0}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_NAME: ${QUEUE_NAME:-eyecontact}
+      MASK_QUEUE_NAME: ${MASK_QUEUE_NAME:-eyecontact-fast}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-eyecontact}
+      GAZE_WARP_STRENGTH: ${GAZE_WARP_STRENGTH:-1.0}
+      TEMPORAL_SMOOTH: ${TEMPORAL_SMOOTH:-0.5}
+      MAX_SHIFT_IRIS_RADII: ${MAX_SHIFT_IRIS_RADII:-1.4}
+      DEFAULT_SKIN_SMOOTH: ${DEFAULT_SKIN_SMOOTH:-0.5}
+      DEFAULT_TEETH_WHITEN: ${DEFAULT_TEETH_WHITEN:-0.5}
+      DEFAULT_EYE_BRIGHTEN: ${DEFAULT_EYE_BRIGHTEN:-0.4}
+      SAM2_ENABLED: ${SAM2_ENABLED:-true}
+      SAM2_MODEL: ${SAM2_MODEL:-sam2_hiera_tiny}
+      SAM2_DEVICE: ${SAM2_DEVICE:-cpu}
+      SAM2_WEIGHTS_DIR: /models/sam2
+      ALLOW_WEBM_ALPHA: ${ALLOW_WEBM_ALPHA:-true}
+      TMP_DIR: /tmp/eyecontact
+    volumes:
+      - worker_tmp:/tmp/eyecontact
+      - sam2_weights:/models
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    ports:
+      - "3004:3004"
+    depends_on:
+      - api
+
+volumes:
+  redis_data:
+  worker_tmp:
+  api_preview_cache:
+  # Persistent cache for SAM2 weights so repeated jobs don't re-download.
+  sam2_weights:

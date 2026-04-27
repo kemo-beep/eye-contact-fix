@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+!.env.example
+docs
+storage
+*.log
+**/__pycache__
+**/.venv
+**/.pytest_cache
+worker/tmp

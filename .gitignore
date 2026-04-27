@@ -29,7 +29,18 @@ yarn-error.log*
 pnpm-debug.log*
 
 # env files
+.env
 .env*.local
+!.env.example
+
+# python
+**/__pycache__/
+**/.venv/
+**/*.pyc
+worker/tmp/
+
+# build
+apps/api/.pytest_cache/
 
 # typescript
 *.tsbuildinfo

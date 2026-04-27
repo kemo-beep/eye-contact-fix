@@ -1,0 +1,120 @@
+"use client"
+
+import * as React from "react"
+import { Loader2, Pause, Play } from "lucide-react"
+
+import { BeforeAfter } from "@/components/before-after"
+import type { Job } from "@/lib/api"
+import { cn } from "@/lib/utils"
+
+type PreviewProps = {
+  job: Job
+  /** A status banner to overlay (e.g. "Rendering — 35%"). */
+  statusOverlay?: React.ReactNode
+}
+
+/** Editor preview pane.
+ *
+ * - For DRAFT/UPLOADED jobs: shows the original input video with custom transport.
+ * - For QUEUED/PROCESSING: shows the input dimmed with a status overlay.
+ * - For COMPLETED: shows the BeforeAfter comparison slider.
+ * - For FAILED: shows the input with the error in the overlay.
+ */
+export function Preview({ job, statusOverlay }: PreviewProps) {
+  if (job.status === "completed" && job.input_url && job.output_url) {
+    return (
+      <div className="flex flex-col gap-3">
+        <BeforeAfter before={job.input_url} after={job.output_url} />
+        <p className="text-muted-foreground text-center text-xs">
+          Drag the divider to compare. Press{" "}
+          <kbd className="bg-muted rounded px-1 py-0.5">←</kbd> /{" "}
+          <kbd className="bg-muted rounded px-1 py-0.5">→</kbd> for fine control.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SinglePlayer src={job.input_url ?? ""} overlay={statusOverlay} />
+    </div>
+  )
+}
+
+function SinglePlayer({
+  src,
+  overlay,
+}: {
+  src: string
+  overlay?: React.ReactNode
+}) {
+  const videoRef = React.useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = React.useState(false)
+
+  React.useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    const onPlay = () => setPlaying(true)
+    const onPause = () => setPlaying(false)
+    const onEnded = () => setPlaying(false)
+    v.addEventListener("play", onPlay)
+    v.addEventListener("pause", onPause)
+    v.addEventListener("ended", onEnded)
+    return () => {
+      v.removeEventListener("play", onPlay)
+      v.removeEventListener("pause", onPause)
+      v.removeEventListener("ended", onEnded)
+    }
+  }, [])
+
+  function toggle() {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) void v.play()
+    else v.pause()
+  }
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
+      {src ? (
+        <video
+          ref={videoRef}
+          src={src}
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-white/60">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
+      )}
+
+      {src ? (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={playing ? "Pause" : "Play"}
+          className={cn(
+            "absolute inset-0 flex items-center justify-center transition-opacity",
+            playing ? "opacity-0 hover:opacity-100" : "opacity-100"
+          )}
+        >
+          <span className="flex size-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg backdrop-blur transition-transform hover:scale-105">
+            {playing ? (
+              <Pause className="size-5" />
+            ) : (
+              <Play className="size-5 translate-x-0.5" />
+            )}
+          </span>
+        </button>
+      ) : null}
+
+      {overlay ? (
+        <div className="pointer-events-none absolute inset-0 flex items-end p-4">
+          <div className="pointer-events-auto w-full">{overlay}</div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
