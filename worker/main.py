@@ -19,23 +19,12 @@ from typing import Any, Dict, List, Mapping, Optional
 import imageio_ffmpeg
 
 from worker.config import settings
-from worker.db import Job, JobStatus, OutputFormat, session_scope
-from worker.effects import (
-    BackgroundEffect,
-    BeautyEffect,
-    EyeContactEffect,
-    FrameContext,
-    RenderMeta,
-)
-from worker.gaze.landmarks import FaceLandmarker
+from worker.core.pipeline import PipelineRunner
+from worker.db import Job, JobStatus, session_scope
+from worker.plugins.registry import configs_from_effects, load_plugins
 from worker.gaze.video_io import (
-    AlphaWebMWriter,
     ensure_dir,
-    iter_frames,
-    mux_audio,
-    mux_audio_webm,
     open_video,
-    open_writer,
 )
 from worker.storage import download_to, upload_output
 
@@ -88,65 +77,6 @@ def _ffmpeg_bin() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Effect construction from the saved payload
-# ---------------------------------------------------------------------------
-
-
-def _build_effects(
-    payload: Mapping[str, Any],
-    sam_masks: Optional[Dict[int, Any]],
-) -> List[object]:
-    """Build the ordered effect list. Background runs FIRST so its mask is
-    computed off the original frame, but composite is the LAST step — to
-    achieve that we structure the pipeline as: build mask, run pixel work,
-    composite. We model this with two passes per frame in ``_run_pipeline``.
-
-    Returns a list ordered by mutation order (mask, beauty, eye-contact).
-    The composite step is handled directly by the loop because it depends
-    on whether we're writing alpha.
-    """
-    effects: List[object] = []
-
-    bg = payload.get("background") or {}
-    if bg.get("enabled"):
-        effects.append(
-            BackgroundEffect(
-                enabled=True,
-                mode=bg.get("mode", "auto"),
-                output=bg.get("output", "blur"),
-                color=bg.get("color") or "#000000",
-                blur_strength=int(bg.get("blur_strength", 25)),
-                invert_mask=bool(bg.get("invert_mask", False)),
-                sam_masks=sam_masks,
-            )
-        )
-
-    beauty = payload.get("beauty") or {}
-    if beauty.get("enabled"):
-        effects.append(
-            BeautyEffect(
-                enabled=True,
-                skin_smooth=float(beauty.get("skin_smooth", 0.0)),
-                teeth_whiten=float(beauty.get("teeth_whiten", 0.0)),
-                eye_brighten=float(beauty.get("eye_brighten", 0.0)),
-            )
-        )
-
-    eye = payload.get("eye_contact") or {}
-    if eye.get("enabled"):
-        effects.append(
-            EyeContactEffect(
-                enabled=True,
-                strength=float(eye.get("strength", 1.0)),
-                temporal_alpha=settings.TEMPORAL_SMOOTH,
-                max_shift_iris_radii=settings.MAX_SHIFT_IRIS_RADII,
-            )
-        )
-
-    return effects
-
-
-# ---------------------------------------------------------------------------
 # Frame extraction (for SAM2 video predictor)
 # ---------------------------------------------------------------------------
 
@@ -168,119 +98,6 @@ def _extract_jpeg_frames(input_video: str, dest_dir: str, fps: float) -> int:
         raise RuntimeError(f"ffmpeg frame extract failed: {proc.stderr[-1000:]}")
     files = sorted(f for f in os.listdir(dest_dir) if f.endswith(".jpg"))
     return len(files)
-
-
-# ---------------------------------------------------------------------------
-# RENDER pipeline
-# ---------------------------------------------------------------------------
-
-
-def _run_pipeline(
-    *,
-    input_path: str,
-    output_path: str,
-    effects: List[object],
-    output_format: str,
-    on_progress,
-) -> str:
-    """Run the per-frame loop and write the final video.
-
-    For MP4: write BGR frames into a temp .mp4, then mux audio onto it.
-    For WebM-alpha: pipe RGBA frames into ffmpeg libvpx-vp9 directly, then
-    mux audio (Opus) into the final WebM.
-    """
-    cap, meta = open_video(input_path)
-    logger.info(
-        "Opened video %s -> %dx%d @ %.2ffps (%d frames)",
-        input_path, meta.width, meta.height, meta.fps, meta.frame_count,
-    )
-
-    render_meta = RenderMeta(
-        width=meta.width,
-        height=meta.height,
-        fps=meta.fps,
-        frame_count=meta.frame_count,
-        output_format=output_format,
-        work_dir=os.path.dirname(output_path),
-    )
-    for eff in effects:
-        eff.prepare(render_meta)
-
-    needs_landmarks = any(
-        getattr(eff, "name", "") in {"eye_contact", "beauty"} for eff in effects
-    )
-    needs_alpha = output_format == "webm_alpha"
-
-    tmp_video: Optional[str] = None
-    writer = None
-    alpha_writer: Optional[AlphaWebMWriter] = None
-
-    if needs_alpha:
-        tmp_video = output_path + ".alpha.webm"
-        ensure_dir(os.path.dirname(output_path) or ".")
-        alpha_writer = AlphaWebMWriter(tmp_video, meta).__enter__()
-    else:
-        tmp_video = output_path + ".novideoaudio.mp4"
-        ensure_dir(os.path.dirname(output_path) or ".")
-        writer = open_writer(tmp_video, meta)
-
-    landmarker = FaceLandmarker() if needs_landmarks else None
-    processed = 0
-
-    try:
-        for idx, frame in enumerate(iter_frames(cap)):
-            ctx = FrameContext(frame_idx=idx, frame=frame)
-
-            if landmarker is not None:
-                ctx.landmarks = landmarker.detect(frame)
-
-            for eff in effects:
-                eff.apply(ctx)
-
-            out_frame = ctx.frame if ctx.frame is not None else frame
-
-            if alpha_writer is not None:
-                # Default alpha = full opaque if the background effect didn't run.
-                alpha = ctx.alpha
-                if alpha is None:
-                    import numpy as np
-                    alpha = np.full(out_frame.shape[:2], 255, dtype="uint8")
-                alpha_writer.write(out_frame, alpha)
-            else:
-                writer.write(out_frame)
-
-            processed += 1
-            if on_progress and (processed % 5 == 0 or processed == meta.frame_count):
-                on_progress(processed, meta.frame_count)
-    finally:
-        if writer is not None:
-            writer.release()
-        if alpha_writer is not None:
-            try:
-                alpha_writer.__exit__(None, None, None)
-            except Exception:
-                logger.exception("Alpha writer close failed")
-        if landmarker is not None:
-            try:
-                landmarker.close()
-            except Exception:
-                pass
-        cap.release()
-        for eff in effects:
-            try:
-                eff.close()
-            except Exception:  # pragma: no cover
-                logger.exception("Effect close failed")
-
-    if needs_alpha:
-        final = mux_audio_webm(tmp_video, input_path, output_path)
-    else:
-        final = mux_audio(tmp_video, input_path, output_path)
-    try:
-        os.remove(tmp_video)
-    except OSError:
-        pass
-    return final
 
 
 def process_render_job(job_id_str: str, effects_payload: Mapping[str, Any]) -> str:
@@ -329,7 +146,8 @@ def process_render_job(job_id_str: str, effects_payload: Mapping[str, Any]) -> s
             )
             _update_status(job_id, progress=20)
 
-        effects = _build_effects(effects_payload, sam_masks)
+        plugin_configs = configs_from_effects(effects_payload, sam_masks)
+        plugins = load_plugins(plugin_configs)
 
         def on_progress(done: int, total: int) -> None:
             if total <= 0:
@@ -338,13 +156,14 @@ def process_render_job(job_id_str: str, effects_payload: Mapping[str, Any]) -> s
             pct = base + int((90 - base) * done / total)
             _update_status(job_id, progress=pct)
 
-        _run_pipeline(
+        PipelineRunner(
+            job_id=str(job_id),
             input_path=input_path,
             output_path=output_path,
-            effects=effects,
             output_format=output_format,
+            plugins=plugins,
             on_progress=on_progress,
-        )
+        ).run()
 
         _update_status(job_id, progress=92)
         logger.info("Uploading rendered video to Cloudinary")

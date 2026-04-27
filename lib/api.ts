@@ -18,6 +18,18 @@ export type BeautyEffect = {
   skin_smooth: number
   teeth_whiten: number
   eye_brighten: number
+  eye_size: number
+  eye_distance: number
+  inner_eye: number
+  eye_position: number
+  nose_width: number
+  nose_bridge: number
+  nose_height: number
+  nose_root: number
+  nose_size: number
+  mouth_position: number
+  smile: number
+  mouth_size: number
 }
 
 export type BackgroundOutputMode = "transparent" | "color" | "blur"
@@ -109,6 +121,18 @@ export const DEFAULT_EFFECTS: EffectsPayload = {
     skin_smooth: 0.5,
     teeth_whiten: 0.5,
     eye_brighten: 0.4,
+    eye_size: 0,
+    eye_distance: 0,
+    inner_eye: 0,
+    eye_position: 0,
+    nose_width: 0,
+    nose_bridge: 0,
+    nose_height: 0,
+    nose_root: 0,
+    nose_size: 0,
+    mouth_position: 0,
+    smile: 0,
+    mouth_size: 0,
   },
   background: {
     enabled: false,

@@ -1,0 +1,2 @@
+"""Video processing plugin registry."""
+

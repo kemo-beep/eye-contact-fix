@@ -1,0 +1,2 @@
+"""Core plugin pipeline primitives."""
+

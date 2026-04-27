@@ -26,6 +26,18 @@ class BeautyEffect(BaseModel):
     skin_smooth: float = Field(default=0.0, ge=0.0, le=1.0)
     teeth_whiten: float = Field(default=0.0, ge=0.0, le=1.0)
     eye_brighten: float = Field(default=0.0, ge=0.0, le=1.0)
+    eye_size: float = Field(default=0.0, ge=-1.0, le=1.0)
+    eye_distance: float = Field(default=0.0, ge=-1.0, le=1.0)
+    inner_eye: float = Field(default=0.0, ge=-1.0, le=1.0)
+    eye_position: float = Field(default=0.0, ge=-1.0, le=1.0)
+    nose_width: float = Field(default=0.0, ge=-1.0, le=1.0)
+    nose_bridge: float = Field(default=0.0, ge=-1.0, le=1.0)
+    nose_height: float = Field(default=0.0, ge=-1.0, le=1.0)
+    nose_root: float = Field(default=0.0, ge=-1.0, le=1.0)
+    nose_size: float = Field(default=0.0, ge=-1.0, le=1.0)
+    mouth_position: float = Field(default=0.0, ge=-1.0, le=1.0)
+    smile: float = Field(default=0.0, ge=-1.0, le=1.0)
+    mouth_size: float = Field(default=0.0, ge=-1.0, le=1.0)
 
 
 class ClickPoint(BaseModel):
