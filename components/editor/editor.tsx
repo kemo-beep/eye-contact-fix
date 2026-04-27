@@ -17,11 +17,13 @@ import {
   DEFAULT_EFFECTS,
   downloadUrl,
   getJob,
+  getRetouchAnalysis,
   previewSubjectMask,
   renderJob,
   type ClickPoint,
   type EffectsPayload,
   type Job,
+  type RetouchAnalysis,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -73,9 +75,11 @@ export function Editor({ initialJob }: EditorProps) {
   const [maskPreviewUrl, setMaskPreviewUrl] = React.useState<string | null>(
     initialJob.mask_preview_url ?? null
   )
+  const [retouchAnalysis, setRetouchAnalysis] =
+    React.useState<RetouchAnalysis | null>(null)
   const [maskLoading, setMaskLoading] = React.useState(false)
   const [maskError, setMaskError] = React.useState<string | null>(null)
-  const [selectedTool, setSelectedTool] = React.useState<ToolId>("eye_contact")
+  const [selectedTool, setSelectedTool] = React.useState<ToolId>("beauty")
   const autoRenderTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
@@ -102,6 +106,26 @@ export function Editor({ initialJob }: EditorProps) {
       if (autoRenderTimer.current) clearTimeout(autoRenderTimer.current)
     }
   }, [])
+
+  React.useEffect(() => {
+    const ctrl = new AbortController()
+    const id = window.setTimeout(() => {
+      if (!currentJob.input_url) {
+        setRetouchAnalysis(null)
+        return
+      }
+      getRetouchAnalysis(currentJob.id, 0, ctrl.signal)
+        .then(setRetouchAnalysis)
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return
+          setRetouchAnalysis(null)
+        })
+    }, 0)
+    return () => {
+      ctrl.abort()
+      window.clearTimeout(id)
+    }
+  }, [currentJob.id, currentJob.input_url])
 
   React.useEffect(() => {
     if (rendering || !queuedRender.current) return
@@ -169,14 +193,30 @@ export function Editor({ initialJob }: EditorProps) {
     }
   }
 
+  function sanitizeEffects(next: EffectsPayload): EffectsPayload {
+    if (!retouchAnalysis) return next
+    const features = retouchAnalysis.features
+    const beauty = {
+      ...next.beauty,
+      skin_smooth: features.skin ? next.beauty.skin_smooth : 0,
+      teeth_whiten: features.teeth ? next.beauty.teeth_whiten : 0,
+      eye_brighten: features.eyes ? next.beauty.eye_brighten : 0,
+    }
+    if (!features.skin && !features.eyes && !features.teeth) {
+      beauty.enabled = false
+    }
+    return { ...next, beauty }
+  }
+
   function handleEffectsChange(next: EffectsPayload) {
-    const enabledNow = !effects.background.enabled && next.background.enabled
+    const safeNext = sanitizeEffects(next)
+    const enabledNow = !effects.background.enabled && safeNext.background.enabled
     const openedPicker =
-      effects.background.mode !== "sam" && next.background.mode === "sam"
-    setEffects(next)
+      effects.background.mode !== "sam" && safeNext.background.mode === "sam"
+    setEffects(safeNext)
     if (enabledNow) void requestMaskPreview(points)
     if (openedPicker) setPickerOpen(true)
-    scheduleRender(next)
+    scheduleRender(safeNext)
   }
 
   function handleApplyPoints(next: ClickPoint[]) {
@@ -234,6 +274,12 @@ export function Editor({ initialJob }: EditorProps) {
         <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <Preview
             job={currentJob}
+            retouchPreview={{
+              enabled: effects.beauty.enabled,
+              effect: effects.beauty,
+              analysis: retouchAnalysis,
+              selected: selectedTool === "beauty",
+            }}
             maskOverlayUrl={
               effects.background.enabled
                 ? (maskPreviewUrl ?? currentJob.mask_preview_url)
@@ -282,6 +328,7 @@ export function Editor({ initialJob }: EditorProps) {
           onChange={handleEffectsChange}
           onOpenSubjectPicker={() => setPickerOpen(true)}
           selectedTool={selectedTool}
+          retouchAnalysis={retouchAnalysis}
           samAvailable
         />
       </div>

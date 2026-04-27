@@ -75,6 +75,29 @@ class PreviewFrameResponse(BaseModel):
     duration: Optional[float] = None
 
 
+class RetouchBox(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+class RetouchFeatures(BaseModel):
+    skin: bool = False
+    eyes: bool = False
+    teeth: bool = False
+
+
+class RetouchAnalysisResponse(BaseModel):
+    width: int
+    height: int
+    face: Optional[RetouchBox] = None
+    left_eye: Optional[RetouchBox] = None
+    right_eye: Optional[RetouchBox] = None
+    teeth: Optional[RetouchBox] = None
+    features: RetouchFeatures
+
+
 # ---------------------------------------------------------------------------
 # Job read shape
 # ---------------------------------------------------------------------------

@@ -76,13 +76,34 @@ export type PreviewFrame = {
   duration?: number | null
 }
 
+export type RetouchBox = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type RetouchAnalysis = {
+  width: number
+  height: number
+  face?: RetouchBox | null
+  left_eye?: RetouchBox | null
+  right_eye?: RetouchBox | null
+  teeth?: RetouchBox | null
+  features: {
+    skin: boolean
+    eyes: boolean
+    teeth: boolean
+  }
+}
+
 export type SubjectMaskResult = {
   mask_url: string
   frame_url: string
 }
 
 export const DEFAULT_EFFECTS: EffectsPayload = {
-  eye_contact: { enabled: true, strength: 1.0 },
+  eye_contact: { enabled: false, strength: 1.0 },
   beauty: {
     enabled: false,
     skin_smooth: 0.5,
@@ -229,6 +250,18 @@ export async function getPreviewFrame(
     { cache: "no-store", signal }
   )
   return handle<PreviewFrame>(res)
+}
+
+export async function getRetouchAnalysis(
+  jobId: string,
+  t: number,
+  signal?: AbortSignal
+): Promise<RetouchAnalysis> {
+  const res = await fetch(
+    apiUrl(`/jobs/${jobId}/retouch-analysis?t=${encodeURIComponent(String(t))}`),
+    { cache: "no-store", signal }
+  )
+  return handle<RetouchAnalysis>(res)
 }
 
 export async function previewSubjectMask(

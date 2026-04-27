@@ -17,6 +17,7 @@ from app.schemas.job import (
     JobRead,
     PreviewFrameResponse,
     RenderRequest,
+    RetouchAnalysisResponse,
     SubjectMaskRequest,
     SubjectMaskResponse,
 )
@@ -159,6 +160,45 @@ async def preview_frame(
 
     return PreviewFrameResponse(
         url=info.url, width=info.width, height=info.height, duration=info.duration
+    )
+
+
+@router.get(
+    "/{job_id}/retouch-analysis",
+    response_model=RetouchAnalysisResponse,
+    summary="Detect face regions used by live retouch controls",
+)
+async def retouch_analysis(
+    job_id: uuid.UUID,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    t: float = Query(0.0, ge=0.0),
+) -> RetouchAnalysisResponse:
+    job = await session.scalar(select(Job).where(Job.id == job_id))
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if not job.input_url:
+        raise HTTPException(status_code=409, detail="Job has no input video")
+
+    try:
+        info = preview_service.analyze_retouch_frame(job.id, job.input_url, t)
+    except Exception as exc:
+        logger.exception("Retouch analysis failed")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not analyze retouch regions: {exc}",
+        ) from exc
+
+    def box(value):
+        return value.__dict__ if value is not None else None
+
+    return RetouchAnalysisResponse(
+        width=info.width,
+        height=info.height,
+        face=box(info.face),
+        left_eye=box(info.left_eye),
+        right_eye=box(info.right_eye),
+        teeth=box(info.teeth),
+        features=info.features,
     )
 
 

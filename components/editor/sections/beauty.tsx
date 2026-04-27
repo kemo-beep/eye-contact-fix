@@ -1,17 +1,16 @@
 "use client"
 
-import { Sparkles, SmilePlus, ScanFace } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 
 import { Slider } from "@/components/ui/slider"
-import type { BeautyEffect } from "@/lib/api"
+import type { BeautyEffect, RetouchAnalysis } from "@/lib/api"
 
 import { FieldRow, InspectorSection } from "./section"
 
 type Props = {
   value: BeautyEffect
   onChange: (v: BeautyEffect) => void
+  analysis?: RetouchAnalysis | null
 }
 
 const PRESETS: Record<string, Pick<BeautyEffect, "skin_smooth" | "teeth_whiten" | "eye_brighten">> = {
@@ -33,20 +32,32 @@ function activePreset(v: BeautyEffect): string | null {
   return null
 }
 
-export function BeautySection({ value, onChange }: Props) {
+export function BeautySection({ value, onChange, analysis }: Props) {
   const current = activePreset(value)
+  const features = analysis?.features ?? { skin: true, eyes: true, teeth: true }
+
+  function patch(p: Partial<BeautyEffect>) {
+    onChange({
+      ...value,
+      ...p,
+      skin_smooth: features.skin ? (p.skin_smooth ?? value.skin_smooth) : 0,
+      teeth_whiten: features.teeth ? (p.teeth_whiten ?? value.teeth_whiten) : 0,
+      eye_brighten: features.eyes ? (p.eye_brighten ?? value.eye_brighten) : 0,
+    })
+  }
+
   return (
     <InspectorSection
       title="Retouch"
       enabled={value.enabled}
-      onEnabledChange={(enabled) => onChange({ ...value, enabled })}
+      onEnabledChange={(enabled) => patch({ enabled })}
     >
       <div className="mb-3 flex items-center gap-1">
         {Object.keys(PRESETS).map((name) => (
           <button
             key={name}
             type="button"
-            onClick={() => onChange({ ...value, ...PRESETS[name] })}
+            onClick={() => patch(PRESETS[name])}
             className={cn(
               "h-7 rounded px-3 text-xs font-medium transition-colors",
               current === name
@@ -61,50 +72,41 @@ export function BeautySection({ value, onChange }: Props) {
 
       <FieldRow
         label="Smooth"
-        value={`${Math.round(value.skin_smooth * 100)}%`}
+        value={`${Math.round((features.skin ? value.skin_smooth : 0) * 100)}%`}
       >
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ScanFace className="size-3.5" />
-          <span>Face skin</span>
-        </div>
         <Slider
-          value={value.skin_smooth}
-          onChange={(v) => onChange({ ...value, skin_smooth: v })}
+          value={features.skin ? value.skin_smooth : 0}
+          onChange={(v) => patch({ skin_smooth: v })}
           min={0}
           max={1}
           step={0.01}
+          disabled={!features.skin}
         />
       </FieldRow>
       <FieldRow
         label="White Teeth"
-        value={`${Math.round(value.teeth_whiten * 100)}%`}
+        value={`${Math.round((features.teeth ? value.teeth_whiten : 0) * 100)}%`}
       >
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <SmilePlus className="size-3.5" />
-          <span>Smile</span>
-        </div>
         <Slider
-          value={value.teeth_whiten}
-          onChange={(v) => onChange({ ...value, teeth_whiten: v })}
+          value={features.teeth ? value.teeth_whiten : 0}
+          onChange={(v) => patch({ teeth_whiten: v })}
           min={0}
           max={1}
           step={0.01}
+          disabled={!features.teeth}
         />
       </FieldRow>
       <FieldRow
         label="Bright Eye"
-        value={`${Math.round(value.eye_brighten * 100)}%`}
+        value={`${Math.round((features.eyes ? value.eye_brighten : 0) * 100)}%`}
       >
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Sparkles className="size-3.5" />
-          <span>Eyes</span>
-        </div>
         <Slider
-          value={value.eye_brighten}
-          onChange={(v) => onChange({ ...value, eye_brighten: v })}
+          value={features.eyes ? value.eye_brighten : 0}
+          onChange={(v) => patch({ eye_brighten: v })}
           min={0}
           max={1}
           step={0.01}
+          disabled={!features.eyes}
         />
       </FieldRow>
     </InspectorSection>

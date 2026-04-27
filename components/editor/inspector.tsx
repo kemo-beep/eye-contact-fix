@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Sparkles } from "lucide-react"
 
-import type { EffectsPayload, OutputFormat } from "@/lib/api"
+import type { EffectsPayload, OutputFormat, RetouchAnalysis } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 import { BackgroundSection } from "./sections/background"
@@ -17,6 +17,7 @@ type Props = {
   selectedTool: ToolId
   rendering?: boolean
   samAvailable?: boolean
+  retouchAnalysis?: RetouchAnalysis | null
 }
 
 export type ToolId = "background" | "beauty" | "eye_contact"
@@ -32,6 +33,7 @@ export function Inspector({
   onOpenSubjectPicker,
   selectedTool,
   samAvailable,
+  retouchAnalysis,
 }: Props) {
   function patch(p: Partial<EffectsPayload>) {
     const next = { ...effects, ...p }
@@ -86,6 +88,7 @@ export function Inspector({
             <BeautySection
               value={effects.beauty}
               onChange={(v) => patch({ beauty: v })}
+              analysis={retouchAnalysis}
             />
           ) : null}
           {selectedTool === "background" ? (
