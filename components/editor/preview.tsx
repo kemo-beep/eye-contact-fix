@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, Pause, Play } from "lucide-react"
+import { Loader2, Pause, Play, Repeat } from "lucide-react"
 
 import { BeforeAfter } from "@/components/before-after"
 import type { Job } from "@/lib/api"
@@ -69,6 +69,10 @@ function SinglePlayer({
 }) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = React.useState(false)
+  const [speed, setSpeed] = React.useState(1)
+  const [loop, setLoop] = React.useState(true)
+
+  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
   React.useEffect(() => {
     const v = videoRef.current
@@ -93,6 +97,28 @@ function SinglePlayer({
     else v.pause()
   }
 
+  function handleSpeedChange(next: number) {
+    setSpeed(next)
+    const v = videoRef.current
+    if (!v) return
+    v.playbackRate = next
+  }
+
+  function handleLoopToggle() {
+    const next = !loop
+    setLoop(next)
+    const v = videoRef.current
+    if (!v) return
+    v.loop = next
+  }
+
+  React.useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    v.playbackRate = speed
+    v.loop = loop
+  }, [speed, loop])
+
   return (
     <div className="relative h-full min-h-80 w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl">
       {src ? (
@@ -110,23 +136,51 @@ function SinglePlayer({
       )}
 
       {src ? (
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={playing ? "Pause" : "Play"}
-          className={cn(
-            "absolute inset-0 flex items-center justify-center transition-opacity",
-            playing ? "opacity-0 hover:opacity-100" : "opacity-100"
-          )}
-        >
-          <span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur transition-transform hover:scale-105">
-            {playing ? (
-              <Pause className="size-5" />
-            ) : (
-              <Play className="size-5 translate-x-0.5" />
-            )}
-          </span>
-        </button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3">
+          <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-lg border border-white/15 bg-black/65 px-2.5 py-2 text-white backdrop-blur">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label={playing ? "Pause" : "Play"}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 transition-colors hover:bg-white/25"
+              >
+                {playing ? (
+                  <Pause className="size-4" />
+                ) : (
+                  <Play className="size-4 translate-x-px" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleLoopToggle}
+                aria-label={loop ? "Disable loop" : "Enable loop"}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors",
+                  loop ? "bg-white/20" : "bg-white/10 hover:bg-white/15"
+                )}
+              >
+                <Repeat className="size-3.5" />
+                Loop
+              </button>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs">
+              <span className="text-white/80">Speed</span>
+              <select
+                value={speed}
+                onChange={(e) => handleSpeedChange(Number(e.target.value))}
+                className="h-8 rounded-md border border-white/20 bg-black/60 px-2 text-xs text-white outline-none"
+              >
+                {SPEEDS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}x
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
       ) : null}
 
       {maskOverlayUrl ? (
