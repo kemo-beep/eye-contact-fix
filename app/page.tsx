@@ -37,24 +37,30 @@ export default function Page() {
     <main className="bg-background relative min-h-svh">
       <div
         aria-hidden
-        className="from-primary/8 pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px] bg-linear-to-b via-transparent to-transparent"
-      />
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full w-full overflow-hidden"
+      >
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 blur-[120px] rounded-full" />
+      </div>
 
-      <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-        <Link href="/" className="flex items-center gap-2.5">
+      <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4 mt-2 rounded-full bg-background/50 backdrop-blur-lg border border-border/40 shadow-sm transition-all">
+        <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
           <Logo />
-          <span className="text-sm font-medium tracking-tight">EyeContact</span>
+          <span className="text-sm font-semibold tracking-tight">EyeContact</span>
         </Link>
         <ThemeToggle />
       </header>
 
-      <section className="mx-auto max-w-3xl px-6 pt-12 pb-8 sm:pt-20">
-        <h1 className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+      <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-16 pb-12 text-center sm:pt-24">
+        <div className="mb-6 inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary backdrop-blur-sm">
+          <span className="mr-2 flex size-1.5 rounded-full bg-primary" />
+          EyeContact Studio
+        </div>
+        <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tighter sm:text-6xl">
           Look people in the eye.
         </h1>
-        <p className="text-muted-foreground mt-4 max-w-md text-base sm:text-lg">
+        <p className="mt-5 max-w-xl text-balance text-base text-muted-foreground sm:text-lg leading-relaxed">
           Upload a talking-head video. Then fix gaze, retouch, or remove the
-          background — all in one render.
+          background — all in one seamless render.
         </p>
       </section>
 

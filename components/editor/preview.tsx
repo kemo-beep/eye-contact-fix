@@ -92,7 +92,7 @@ function SinglePlayer({
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl">
       {src ? (
         <video
           ref={videoRef}

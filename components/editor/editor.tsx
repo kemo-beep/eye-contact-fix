@@ -113,21 +113,23 @@ export function Editor({ initialJob, onExit }: EditorProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {/* Top toolbar */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/40 bg-card/60 px-5 py-3 shadow-sm backdrop-blur-xl transition-all">
+        <div className="flex items-center gap-4">
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={onExit}
             disabled={rendering}
+            className="h-8 rounded-full px-4 text-xs font-medium"
           >
-            <ArrowLeft />
+            <ArrowLeft className="mr-1.5 size-3.5" />
             Back
           </Button>
-          <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+          <div className="h-4 w-px bg-border/60" />
+          <span className="hidden truncate text-sm font-medium text-foreground/80 sm:inline tracking-tight">
             {currentJob.original_filename}
           </span>
         </div>

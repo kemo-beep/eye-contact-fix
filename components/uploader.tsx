@@ -141,10 +141,10 @@ export function Uploader({ onUploaded }: UploaderProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center transition-all sm:p-10",
-          "border-border/80 bg-card hover:border-foreground/40",
-          isDragging && "border-primary bg-primary/5",
-          file && "border-solid border-foreground/15"
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-10 text-center transition-all duration-300 sm:p-12",
+          "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xl hover:shadow-primary/5",
+          isDragging && "border-primary bg-primary/10 scale-[1.02]",
+          file && "border-solid border-foreground/20 bg-background/50 backdrop-blur-sm"
         )}
       >
         {file ? (
@@ -163,20 +163,20 @@ export function Uploader({ onUploaded }: UploaderProps) {
           <>
             <div
               className={cn(
-                "flex size-11 items-center justify-center rounded-md transition-all",
+                "flex size-14 items-center justify-center rounded-full transition-all duration-300",
                 isDragging
-                  ? "bg-primary/15 text-primary"
-                  : "bg-foreground/4 text-foreground group-hover:bg-foreground/8"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110"
+                  : "bg-secondary text-secondary-foreground group-hover:bg-primary/10 group-hover:text-primary"
               )}
             >
-              <Upload className="size-5" />
+              <Upload className="size-6" />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <span className="text-base font-medium tracking-tight">
-                Drop a video, or click to choose
+            <div className="flex flex-col gap-1.5 mt-2">
+              <span className="text-lg font-medium tracking-tight">
+                Drop your video here
               </span>
-              <span className="text-muted-foreground text-xs">
-                MP4 · MOV · MKV · WebM &nbsp;·&nbsp; up to {formatBytes(MAX_BYTES)}
+              <span className="text-muted-foreground text-sm">
+                Click to browse • MP4, MOV, MKV, WebM (max {formatBytes(MAX_BYTES)})
               </span>
             </div>
           </>

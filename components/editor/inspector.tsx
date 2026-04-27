@@ -48,11 +48,11 @@ export function Inspector({
     Number(effects.background.enabled)
 
   return (
-    <aside className="flex h-full max-h-[calc(100dvh-7rem)] min-h-[34rem] flex-col overflow-hidden rounded-lg border border-border/60 bg-card min-[900px]:sticky min-[900px]:top-4">
-      <header className="flex items-center justify-between gap-2 border-b border-border/60 px-5 py-3.5">
+    <aside className="flex h-full max-h-[calc(100dvh-7rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border border-border/40 bg-card/80 backdrop-blur-xl shadow-xl shadow-black/5 min-[900px]:sticky min-[900px]:top-4 transition-all">
+      <header className="flex items-center justify-between gap-2 border-b border-border/40 px-5 py-4 bg-background/50">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-3.5" />
-          <span className="text-sm font-semibold tracking-tight">Effects</span>
+          <Sparkles className="size-4 text-primary" />
+          <span className="text-sm font-bold tracking-tight">Effects Studio</span>
         </div>
         <span className="text-[11px] text-muted-foreground tabular-nums">
           {enabledCount} active
@@ -106,7 +106,7 @@ export function Inspector({
         </section>
       </div>
 
-      <footer className="sticky bottom-0 flex flex-col gap-2 border-t border-border/60 bg-card/95 p-4 backdrop-blur">
+      <footer className="sticky bottom-0 flex flex-col gap-3 border-t border-border/40 bg-background/80 p-5 backdrop-blur-xl">
         {hint ? (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             {hint}
