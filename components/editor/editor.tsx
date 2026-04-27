@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  ArrowLeft,
   Check,
   Download,
   Eye,
@@ -32,8 +31,6 @@ import { SubjectPicker } from "./subject-picker"
 
 type EditorProps = {
   initialJob: Job
-  /** Reset back to the upload screen. */
-  onExit: () => void
 }
 
 const ACTIVE: ReadonlySet<Job["status"]> = new Set(["queued", "processing"])
@@ -63,7 +60,7 @@ const TOOLS: {
   },
 ]
 
-export function Editor({ initialJob, onExit }: EditorProps) {
+export function Editor({ initialJob }: EditorProps) {
   const [job, setJob] = React.useState<Job>(initialJob)
   const [effects, setEffects] = React.useState<EffectsPayload>(
     normalizeEffects(initialJob.effects)
@@ -198,34 +195,18 @@ export function Editor({ initialJob, onExit }: EditorProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden w-full mx-auto max-w-5xl">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onExit}
-            disabled={rendering}
-            className="h-8 px-2 text-xs"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back
-          </Button>
-          <span className="hidden truncate text-xs font-medium text-muted-foreground sm:inline">
-            {currentJob.original_filename}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden w-full mx-auto max-w-6xl p-2 sm:p-4 font-sans">
+      {failed || (completed && currentJob.output_url) ? (
+        <div className="flex items-center justify-end gap-2 rounded-xl border border-border/20 bg-card/40 px-4 py-3">
           {failed ? (
             <Button
               type="button"
-              variant="outline"
+              variant="destructive"
               size="sm"
               onClick={handleRender}
+              className="h-9 rounded-lg shadow-none"
             >
-              <RotateCcw />
+              <RotateCcw className="size-4 mr-1.5" />
               Retry
             </Button>
           ) : null}
@@ -235,16 +216,20 @@ export function Editor({ initialJob, onExit }: EditorProps) {
               target="_blank"
               rel="noreferrer"
             >
-              <Button type="button" size="sm">
-                <Download />
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 rounded-lg bg-primary text-primary-foreground shadow-none transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+              >
+                <Download className="size-4 mr-1.5" />
                 Download
               </Button>
             </a>
           ) : null}
         </div>
-      </div>
+      ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 min-[900px]:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 min-[900px]:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
         {/* Preview pane */}
         <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <Preview
@@ -257,19 +242,19 @@ export function Editor({ initialJob, onExit }: EditorProps) {
             maskLoading={maskLoading}
             statusOverlay={
               rendering ? (
-                <div className="rounded-lg bg-black/60 px-4 py-3 text-white backdrop-blur">
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      <Loader2 className="size-3.5 animate-spin" />
+                <div className="rounded-xl bg-background/80 px-5 py-4 text-foreground backdrop-blur-md border border-border/20 shadow-sm">
+                  <div className="mb-2.5 flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-2.5 text-sm font-semibold font-heading">
+                      <Loader2 className="size-4 animate-spin text-primary" />
                       {currentJob.status === "queued" ? "Queued" : "Rendering"}
                     </span>
-                    <span className="text-sm tabular-nums">
+                    <span className="text-sm font-medium tabular-nums bg-secondary px-2 py-0.5 rounded-md">
                       {currentJob.progress}%
                     </span>
                   </div>
-                  <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/15">
+                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                     <div
-                      className="absolute inset-y-0 left-0 bg-white transition-[width] duration-500"
+                      className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out"
                       style={{ width: `${currentJob.progress}%` }}
                     />
                   </div>
@@ -280,10 +265,14 @@ export function Editor({ initialJob, onExit }: EditorProps) {
             }
           />
           {renderError ? (
-            <p className="text-xs text-destructive">{renderError}</p>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 shadow-none">
+              <p className="text-sm text-destructive font-medium">{renderError}</p>
+            </div>
           ) : null}
           {maskError ? (
-            <p className="text-xs text-destructive">{maskError}</p>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 shadow-none">
+              <p className="text-sm text-destructive font-medium">{maskError}</p>
+            </div>
           ) : null}
         </div>
 
@@ -296,37 +285,33 @@ export function Editor({ initialJob, onExit }: EditorProps) {
           samAvailable
         />
       </div>
-
-      <div className="rounded-lg border border-border/50 bg-card p-2">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      
+      <div className="rounded-xl border border-border/20 bg-card/40 backdrop-blur-md p-2">
+        <div className="flex flex-wrap gap-2 items-center justify-center sm:justify-start">
           {TOOLS.map(({ id, title, Icon, active }) => {
             const isSelected = selectedTool === id
+            const isActive = active(effects)
             return (
               <button
                 key={id}
                 type="button"
                 onClick={() => setSelectedTool(id)}
                 className={cn(
-                  "flex items-center justify-between rounded-md border px-3 py-2 text-left transition-colors",
+                  "relative flex min-w-20 flex-col items-center justify-center gap-1.5 rounded-lg border px-4 py-3 transition-all duration-200",
                   isSelected
-                    ? "border-primary bg-primary/10"
-                    : "border-border/60 hover:border-border hover:bg-secondary/50"
+                    ? "border-primary bg-primary/10 shadow-none scale-100"
+                    : "border-transparent hover:border-border/40 hover:bg-secondary/30"
                 )}
               >
-                <span className="flex items-center gap-2">
-                  <Icon className="size-4" />
-                  <span className="text-sm font-medium">{title}</span>
-                </span>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-                    active(effects)
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {active(effects) ? "On" : "Off"}
-                </span>
+                <Icon className={cn("size-5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-xs font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>{title}</span>
+                {isActive ? (
+                  <span
+                    className="absolute top-2 right-2 flex size-2 rounded-full bg-primary"
+                    aria-label={`${title} enabled`}
+                    title={`${title} enabled`}
+                  />
+                ) : null}
               </button>
             )
           })}

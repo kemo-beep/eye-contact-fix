@@ -142,45 +142,47 @@ export function Uploader({ onUploaded }: UploaderProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "group relative flex cursor-pointer items-center justify-center gap-3 rounded-lg border border-dashed p-6 text-center transition-colors sm:p-8",
-          "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5",
-          isDragging && "border-primary bg-primary/10",
-          file && "border-solid border-foreground/20 bg-background/50"
+          "group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-8 text-center transition-all duration-300 sm:p-12",
+          "border-border/40 bg-card/40 hover:border-primary/40 hover:bg-primary/5",
+          isDragging && "scale-[1.02] border-primary/50 bg-primary/10 shadow-none",
+          file && "border-solid border-foreground/10 bg-background/50 scale-100"
         )}
       >
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+        
         {file ? (
-          <>
-            <div className="flex size-9 items-center justify-center rounded-md bg-foreground/5">
-              <Film className="size-5" />
+          <div className="relative z-10 flex flex-col items-center gap-3">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-foreground/5 shadow-none">
+              <Film className="size-7 text-foreground/70" />
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-sm font-medium">{file.name}</span>
-              <span className="text-xs text-muted-foreground">
+            <div className="flex flex-col items-center gap-1.5">
+              <span className="font-heading text-base font-medium">{file.name}</span>
+              <span className="text-sm text-muted-foreground font-medium">
                 {formatBytes(file.size)}
               </span>
             </div>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="relative z-10 flex flex-col items-center gap-4">
             <div
               className={cn(
-                "flex size-10 items-center justify-center rounded-md transition-colors",
+                "flex size-14 items-center justify-center rounded-2xl transition-all duration-500 shadow-none",
                 isDragging
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                  ? "scale-110 bg-primary text-primary-foreground shadow-none"
+                  : "bg-secondary text-secondary-foreground group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-none"
               )}
             >
-              <Upload className="size-5" />
+              <Upload className="size-6 transition-transform duration-500 group-hover:-translate-y-0.5" />
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium tracking-tight">
-                Drop video
+            <div className="flex flex-col gap-1.5">
+              <span className="font-heading text-lg font-semibold tracking-tight">
+                Click to upload or drag and drop
               </span>
-              <span className="text-xs text-muted-foreground">
-                MP4, MOV, MKV, WebM · {formatBytes(MAX_BYTES)}
+              <span className="text-sm text-muted-foreground font-medium">
+                MP4, MOV, MKV, WebM up to {formatBytes(MAX_BYTES)}
               </span>
             </div>
-          </>
+          </div>
         )}
         <input
           id="video-input"

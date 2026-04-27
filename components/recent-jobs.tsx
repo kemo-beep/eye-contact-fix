@@ -38,7 +38,29 @@ export function RecentJobs({ onSelect }: { onSelect?: (job: Job) => void }) {
     }
   }, [])
 
-  if (items === null && !error) return null
+  if (items === null && !error) {
+    return (
+      <section className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+            Recent
+          </h2>
+        </div>
+        <ul className="divide-border/40 divide-y border-y border-border/40">
+          {[1, 2, 3].map((i) => (
+            <li key={i} className="flex items-center justify-between gap-3 py-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted/60" />
+                <div className="h-3 w-1/4 animate-pulse rounded bg-muted/40" />
+              </div>
+              <div className="h-3 w-12 animate-pulse rounded bg-muted/50" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
   if (error && !items) return null
   if (items && items.length === 0) return null
 
@@ -59,7 +81,7 @@ export function RecentJobs({ onSelect }: { onSelect?: (job: Job) => void }) {
         <p className="text-muted-foreground text-xs">Recent jobs are unavailable.</p>
       ) : null}
 
-      <ul className="divide-border/60 divide-y border-y">
+      <ul className="divide-border/40 divide-y border-y border-border/40">
         {items?.map((j) => <JobRow key={j.id} job={j} onSelect={onSelect} />)}
       </ul>
     </section>

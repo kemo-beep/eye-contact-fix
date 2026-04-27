@@ -96,7 +96,7 @@ export function BeforeAfter({ before, after, className }: Props) {
     <div
       ref={containerRef}
       className={cn(
-        "relative aspect-video w-full overflow-hidden rounded-lg bg-black select-none",
+        "relative aspect-video w-full overflow-hidden rounded-xl bg-black select-none shadow-none ring-1 ring-white/5",
         className
       )}
       onPointerMove={onPointerMove}
@@ -135,15 +135,15 @@ export function BeforeAfter({ before, after, className }: Props) {
           playing ? "opacity-0 hover:opacity-100" : "opacity-100"
         )}
       >
-        <span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur transition-transform hover:scale-105">
+        <span className="flex size-14 items-center justify-center rounded-full bg-white/90 text-black shadow-sm backdrop-blur-md transition-all hover:scale-110 active:scale-95">
           {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
         </span>
       </button>
 
-      <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/55 px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider text-white/90 backdrop-blur">
+      <span className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/40 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-sm ring-1 ring-white/10">
         Original
       </span>
-      <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wider text-black">
+      <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black shadow-none ring-1 ring-black/5 backdrop-blur-sm">
         Corrected
       </span>
 
@@ -159,10 +159,10 @@ export function BeforeAfter({ before, after, className }: Props) {
           if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 2))
           if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 2))
         }}
-        className="absolute top-0 bottom-0 w-1 -translate-x-1/2 cursor-ew-resize bg-white/90 outline-none ring-0"
+        className="absolute top-0 bottom-0 w-1 -translate-x-1/2 cursor-ew-resize bg-white/80 shadow-none outline-none ring-0 hover:bg-white transition-colors"
         style={{ left: `${pos}%` }}
       >
-        <div className="absolute left-1/2 top-1/2 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white">
+        <div className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5 hover:scale-110 transition-transform active:scale-95">
           <svg
             width="18"
             height="18"
@@ -173,14 +173,14 @@ export function BeforeAfter({ before, after, className }: Props) {
             <path
               d="M6 4L2 9L6 14"
               stroke="currentColor"
-              strokeWidth="1.6"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             <path
               d="M12 4L16 9L12 14"
               stroke="currentColor"
-              strokeWidth="1.6"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             />

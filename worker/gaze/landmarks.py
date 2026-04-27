@@ -32,6 +32,9 @@ RIGHT_EYE_TOP_BOTTOM = (386, 374)
 LEFT_IRIS = [468, 469, 470, 471, 472]
 RIGHT_IRIS = [473, 474, 475, 476, 477]
 
+FACE_WIDTH_REFS = (234, 454)
+NOSE_TIP = 1
+
 
 @dataclass
 class FaceLandmarks:
@@ -76,6 +79,64 @@ class FaceLandmarks:
             [(outer[0] + inner[0]) / 2.0, (top[1] + bottom[1]) / 2.0],
             dtype=np.float32,
         )
+
+    def eye_width(self, side: str) -> float:
+        outer, inner = self.eye_corners(side)
+        return float(np.linalg.norm(inner - outer))
+
+    def eye_height(self, side: str) -> float:
+        top, bottom = self.eye_top_bottom(side)
+        return float(np.linalg.norm(bottom - top))
+
+    def eye_open_ratio(self, side: str) -> float:
+        width = self.eye_width(side)
+        if width <= 1e-6:
+            return 0.0
+        return self.eye_height(side) / width
+
+    def face_yaw_hint(self) -> float:
+        """Small perspective hint: negative/positive when the head turns.
+
+        This is not a full pose solve; it only nudges the neutral iris target
+        so direct-to-camera gaze still looks plausible when the face is angled.
+        """
+        left = self.points[FACE_WIDTH_REFS[0], :2]
+        right = self.points[FACE_WIDTH_REFS[1], :2]
+        nose = self.points[NOSE_TIP, :2]
+        width = float(abs(right[0] - left[0]))
+        if width <= 1e-6:
+            return 0.0
+        center_x = (left[0] + right[0]) * 0.5
+        return float(np.clip((nose[0] - center_x) / width, -0.35, 0.35))
+
+    def camera_gaze_target(self, side: str) -> np.ndarray:
+        outer, inner = self.eye_corners(side)
+        top, bottom = self.eye_top_bottom(side)
+        width = max(1.0, self.eye_width(side))
+        height = max(1.0, self.eye_height(side))
+
+        target = np.array(
+            [(outer[0] + inner[0]) * 0.5, (top[1] + bottom[1]) * 0.5],
+            dtype=np.float32,
+        )
+        # Iris centers naturally sit a hair above the simple eyelid midpoint.
+        target[1] -= height * 0.08
+        # Head-angle compensation: when the face is turned, camera gaze is not
+        # the same as the geometric eye center. Keep the nudge intentionally
+        # small so frontal footage remains stable.
+        target[0] -= self.face_yaw_hint() * width * 0.28
+        return target
+
+    def gaze_confidence(self, side: str) -> float:
+        radius = self.iris_radius(side)
+        width = self.eye_width(side)
+        open_ratio = self.eye_open_ratio(side)
+        if width <= 1e-6:
+            return 0.0
+        radius_ratio = radius / width
+        iris_ok = np.clip((radius_ratio - 0.045) / 0.035, 0.0, 1.0)
+        open_ok = np.clip((open_ratio - 0.16) / 0.10, 0.0, 1.0)
+        return float(iris_ok * open_ok)
 
 
 class FaceLandmarker:

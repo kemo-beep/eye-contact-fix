@@ -8,7 +8,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from worker.gaze.eye_warp import is_blink, smoothed_delta, warp_iris
+from worker.gaze.eye_warp import is_blink, limited_delta_step, smoothed_delta, warp_iris
 from worker.gaze.landmarks import FaceLandmarker
 from worker.gaze.video_io import (
     ensure_dir,
@@ -89,12 +89,23 @@ def correct_video(
                             continue
 
                         iris = landmarks.iris_center(side)
-                        target = landmarks.gaze_target(side)
+                        target = landmarks.camera_gaze_target(side)
                         radius = landmarks.iris_radius(side)
+                        confidence = landmarks.gaze_confidence(side)
+                        if confidence < 0.18 or radius < 2.0:
+                            prev_delta[side] = None
+                            continue
 
-                        raw_delta = (target - iris) * options.strength
+                        raw_delta = (target - iris) * options.strength * confidence
                         smoothed = smoothed_delta(
-                            prev_delta[side], raw_delta, options.temporal_alpha
+                            prev_delta[side],
+                            raw_delta,
+                            float(np.clip(options.temporal_alpha, 0.18, 0.42)),
+                        )
+                        smoothed = limited_delta_step(
+                            prev_delta[side],
+                            smoothed,
+                            radius,
                         )
                         smoothed = _clamp_delta(
                             smoothed, radius, options.max_shift_iris_radii
@@ -110,6 +121,7 @@ def correct_video(
                             iris_center=iris,
                             delta=smoothed,
                             iris_radius=radius,
+                            eye_outline=outline,
                         )
                         warped_count += 1
 

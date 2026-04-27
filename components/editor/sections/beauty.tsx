@@ -1,5 +1,7 @@
 "use client"
 
+import { Sparkles, SmilePlus, ScanFace } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 import { Slider } from "@/components/ui/slider"
@@ -58,9 +60,13 @@ export function BeautySection({ value, onChange }: Props) {
       </div>
 
       <FieldRow
-        label="Skin smoothing"
+        label="Smooth"
         value={`${Math.round(value.skin_smooth * 100)}%`}
       >
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <ScanFace className="size-3.5" />
+          <span>Face skin</span>
+        </div>
         <Slider
           value={value.skin_smooth}
           onChange={(v) => onChange({ ...value, skin_smooth: v })}
@@ -70,9 +76,13 @@ export function BeautySection({ value, onChange }: Props) {
         />
       </FieldRow>
       <FieldRow
-        label="Teeth whitening"
+        label="White Teeth"
         value={`${Math.round(value.teeth_whiten * 100)}%`}
       >
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <SmilePlus className="size-3.5" />
+          <span>Smile</span>
+        </div>
         <Slider
           value={value.teeth_whiten}
           onChange={(v) => onChange({ ...value, teeth_whiten: v })}
@@ -82,9 +92,13 @@ export function BeautySection({ value, onChange }: Props) {
         />
       </FieldRow>
       <FieldRow
-        label="Eye brightening"
+        label="Bright Eye"
         value={`${Math.round(value.eye_brighten * 100)}%`}
       >
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Sparkles className="size-3.5" />
+          <span>Eyes</span>
+        </div>
         <Slider
           value={value.eye_brighten}
           onChange={(v) => onChange({ ...value, eye_brighten: v })}

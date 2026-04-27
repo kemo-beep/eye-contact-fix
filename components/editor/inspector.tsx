@@ -61,44 +61,48 @@ export function Inspector({
         : "Eye contact"
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
-      <header className="flex items-center justify-between gap-2 border-b border-border/50 px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-3.5 text-primary" />
-          <span className="text-sm font-semibold tracking-tight">{activeTitle}</span>
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/20 bg-card/60 backdrop-blur-md shadow-none">
+      <header className="flex items-center justify-between gap-3 border-b border-border/20 bg-muted/10 px-4 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Sparkles className="size-3.5" />
+          </div>
+          <span className="font-heading text-sm font-semibold tracking-tight text-foreground">{activeTitle}</span>
         </div>
-        <span className="text-[11px] text-muted-foreground tabular-nums">
-          {enabledCount} active
+        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-secondary-foreground tabular-nums tracking-wide">
+          {enabledCount} ACTIVE
         </span>
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {selectedTool === "eye_contact" ? (
-          <EyeContactSection
-            value={effects.eye_contact}
-            onChange={(v) => patch({ eye_contact: v })}
-          />
-        ) : null}
-        {selectedTool === "beauty" ? (
-          <BeautySection
-            value={effects.beauty}
-            onChange={(v) => patch({ beauty: v })}
-          />
-        ) : null}
-        {selectedTool === "background" ? (
-          <BackgroundSection
-            value={effects.background}
-            onChange={(v) => patch({ background: v })}
-            onOpenSubjectPicker={onOpenSubjectPicker}
-            samAvailable={samAvailable}
-          />
-        ) : null}
+        <div className="p-1">
+          {selectedTool === "eye_contact" ? (
+            <EyeContactSection
+              value={effects.eye_contact}
+              onChange={(v) => patch({ eye_contact: v })}
+            />
+          ) : null}
+          {selectedTool === "beauty" ? (
+            <BeautySection
+              value={effects.beauty}
+              onChange={(v) => patch({ beauty: v })}
+            />
+          ) : null}
+          {selectedTool === "background" ? (
+            <BackgroundSection
+              value={effects.background}
+              onChange={(v) => patch({ background: v })}
+              onOpenSubjectPicker={onOpenSubjectPicker}
+              samAvailable={samAvailable}
+            />
+          ) : null}
+        </div>
 
-        <section className="border-border/60 px-3 py-3">
-          <span className="mb-2 block text-[11px] tracking-wider text-muted-foreground uppercase">
-            Output format
+        <section className="mt-2 border-t border-border/20 px-4 py-4 bg-muted/5">
+          <span className="mb-3 block text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Output Format
           </span>
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-2 gap-2">
             {FORMATS.map((f) => {
               const active = effects.output_format === f.id
               return (
@@ -107,10 +111,10 @@ export function Inspector({
                   type="button"
                   onClick={() => patch({ output_format: f.id })}
                   className={cn(
-                    "h-8 rounded border text-xs font-medium transition-colors",
+                    "flex h-9 items-center justify-center rounded-lg border text-xs font-medium transition-all duration-200",
                     active
-                      ? "border-foreground bg-foreground/5"
-                      : "border-border/60 bg-background hover:border-border"
+                      ? "border-primary bg-primary/10 text-primary shadow-none"
+                      : "border-border/40 bg-background hover:border-border hover:bg-secondary/30 text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {f.label}

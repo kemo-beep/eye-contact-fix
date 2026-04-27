@@ -7,7 +7,12 @@ from typing import Optional
 import numpy as np
 
 from worker.effects.base import Effect, FrameContext, RenderMeta
-from worker.gaze.eye_warp import is_blink, smoothed_delta, warp_iris
+from worker.gaze.eye_warp import (
+    is_blink,
+    limited_delta_step,
+    smoothed_delta,
+    warp_iris,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +59,7 @@ class EyeContactEffect:
 
         self._stats["detected"] += 1
         out = ctx.frame
+        samples: dict[str, dict[str, object]] = {}
         for side in ("left", "right"):
             outline = landmarks.eye_outline(side)
             if self.skip_blinks and is_blink(outline):
@@ -61,11 +67,40 @@ class EyeContactEffect:
                 continue
 
             iris = landmarks.iris_center(side)
-            target = landmarks.gaze_target(side)
+            target = landmarks.camera_gaze_target(side)
             radius = landmarks.iris_radius(side)
+            confidence = landmarks.gaze_confidence(side)
+            if confidence < 0.18 or radius < 2.0:
+                self._prev_delta[side] = None
+                continue
 
-            raw = (target - iris) * self.strength
-            smoothed = smoothed_delta(self._prev_delta[side], raw, self.temporal_alpha)
+            raw = (target - iris) * self.strength * confidence
+            samples[side] = {
+                "outline": outline,
+                "iris": iris,
+                "radius": radius,
+                "raw": raw,
+            }
+
+        if not samples:
+            ctx.frame = out
+            return
+
+        if len(samples) == 2:
+            mean_y = float(np.mean([sample["raw"][1] for sample in samples.values()]))
+            for sample in samples.values():
+                raw = sample["raw"]
+                raw[1] = raw[1] * 0.65 + mean_y * 0.35
+
+        for side, sample in samples.items():
+            iris = sample["iris"]
+            outline = sample["outline"]
+            radius = float(sample["radius"])
+            raw = sample["raw"]
+
+            adaptive_alpha = float(np.clip(self.temporal_alpha, 0.18, 0.42))
+            smoothed = smoothed_delta(self._prev_delta[side], raw, adaptive_alpha)
+            smoothed = limited_delta_step(self._prev_delta[side], smoothed, radius)
             smoothed = self._clamp(smoothed, radius, self.max_shift_iris_radii)
             self._prev_delta[side] = smoothed
 
@@ -77,6 +112,7 @@ class EyeContactEffect:
                 iris_center=iris,
                 delta=smoothed,
                 iris_radius=radius,
+                eye_outline=outline,
             )
             self._stats["warped"] += 1
 

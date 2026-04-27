@@ -21,6 +21,7 @@ def warp_iris(
     iris_center: np.ndarray,
     delta: np.ndarray,
     iris_radius: float,
+    eye_outline: np.ndarray | None = None,
     halo: float = 2.2,
 ) -> np.ndarray:
     """Shift the iris pixels by ``delta`` with a smooth radial blend.
@@ -64,6 +65,21 @@ def warp_iris(
     t = np.clip(1.0 - dist / radius, 0.0, 1.0)
     falloff = (t * t * (3.0 - 2.0 * t)).astype(np.float32)
 
+    if eye_outline is not None and eye_outline.shape[0] >= 4:
+        outline = eye_outline.copy().astype(np.float32)
+        outline[:, 0] -= rx0
+        outline[:, 1] -= ry0
+        mask = np.zeros((rh, rw), dtype=np.uint8)
+        hull = cv2.convexHull(outline.astype(np.int32))
+        cv2.fillConvexPoly(mask, hull, 255)
+        dilate_px = max(1, int(round(iris_radius * 0.35)))
+        kernel = cv2.getStructuringElement(
+            cv2.MORPH_ELLIPSE, (dilate_px * 2 + 1, dilate_px * 2 + 1)
+        )
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        mask = cv2.GaussianBlur(mask, (0, 0), max(0.5, iris_radius * 0.18))
+        falloff *= (mask.astype(np.float32) / 255.0)
+
     # Inverse-mapped sampling so output pixels at the iris come from
     # (input - delta), i.e. the iris content shifts by +delta.
     map_x = (xx - falloff * float(delta[0])).astype(np.float32)
@@ -93,6 +109,22 @@ def smoothed_delta(prev: np.ndarray | None, current: np.ndarray, alpha: float) -
     if prev is None:
         return current
     return prev * (1.0 - alpha) + current * alpha
+
+
+def limited_delta_step(
+    prev: np.ndarray | None,
+    current: np.ndarray,
+    iris_radius: float,
+    max_step_radii: float = 0.55,
+) -> np.ndarray:
+    if prev is None or iris_radius <= 0:
+        return current
+    step = current - prev
+    max_step = float(iris_radius) * float(max_step_radii)
+    norm = float(np.linalg.norm(step))
+    if norm > max_step and norm > 1e-6:
+        return prev + step * (max_step / norm)
+    return current
 
 
 def eye_open_ratio(outline: np.ndarray) -> float:
