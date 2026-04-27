@@ -9,8 +9,11 @@ import { cn } from "@/lib/utils"
 
 type PreviewProps = {
   job: Job
+  comparisonEnabled?: boolean
   maskOverlayUrl?: string | null
   maskLoading?: boolean
+  onFrameTimeChange?: (time: number) => void
+  onPlayingChange?: (playing: boolean) => void
   retouchPreview?: {
     enabled: boolean
     effect: BeautyEffect
@@ -30,14 +33,26 @@ type PreviewProps = {
  */
 export function Preview({
   job,
+  comparisonEnabled = false,
   maskOverlayUrl,
   maskLoading,
+  onFrameTimeChange,
+  onPlayingChange,
   retouchPreview,
   statusOverlay,
 }: PreviewProps) {
   const liveRetouch = Boolean(retouchPreview?.selected && retouchPreview.analysis)
 
-  if (job.status === "completed" && job.input_url && job.output_url && !liveRetouch) {
+  const canCompare = Boolean(job.input_url && job.output_url && !liveRetouch)
+  const showComparison =
+    job.status === "completed" && comparisonEnabled && canCompare
+  const src =
+    job.status === "completed" && job.output_url && !liveRetouch
+      ? job.output_url
+      : (job.input_url ?? "")
+  const showMaskOverlay = job.status !== "completed" || liveRetouch
+
+  if (showComparison && job.input_url && job.output_url) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="min-h-0 flex-1">
@@ -50,9 +65,11 @@ export function Preview({
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <SinglePlayer
-        src={job.input_url ?? ""}
-        maskOverlayUrl={maskOverlayUrl}
+        src={src}
+        maskOverlayUrl={showMaskOverlay ? maskOverlayUrl : null}
         maskLoading={maskLoading}
+        onFrameTimeChange={onFrameTimeChange}
+        onPlayingChange={onPlayingChange}
         retouchPreview={retouchPreview}
         overlay={statusOverlay}
       />
@@ -64,12 +81,16 @@ function SinglePlayer({
   src,
   maskOverlayUrl,
   maskLoading,
+  onFrameTimeChange,
+  onPlayingChange,
   retouchPreview,
   overlay,
 }: {
   src: string
   maskOverlayUrl?: string | null
   maskLoading?: boolean
+  onFrameTimeChange?: (time: number) => void
+  onPlayingChange?: (playing: boolean) => void
   retouchPreview?: {
     enabled: boolean
     effect: BeautyEffect
@@ -91,6 +112,7 @@ function SinglePlayer({
   })
 
   const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
+  const lastFrameNotify = React.useRef(0)
 
   React.useEffect(() => {
     const v = videoRef.current
@@ -98,15 +120,27 @@ function SinglePlayer({
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
     const onEnded = () => setPlaying(false)
+    const onTimeUpdate = () => {
+      const now = performance.now()
+      if (now - lastFrameNotify.current < 140) return
+      lastFrameNotify.current = now
+      onFrameTimeChange?.(v.currentTime)
+    }
     v.addEventListener("play", onPlay)
     v.addEventListener("pause", onPause)
     v.addEventListener("ended", onEnded)
+    v.addEventListener("timeupdate", onTimeUpdate)
     return () => {
       v.removeEventListener("play", onPlay)
       v.removeEventListener("pause", onPause)
       v.removeEventListener("ended", onEnded)
+      v.removeEventListener("timeupdate", onTimeUpdate)
     }
-  }, [])
+  }, [onFrameTimeChange])
+
+  React.useEffect(() => {
+    onPlayingChange?.(playing)
+  }, [playing, onPlayingChange])
 
   const updateViewport = React.useCallback(() => {
     const root = frameRef.current
@@ -206,14 +240,23 @@ function SinglePlayer({
     if (!data || !retouchPreview?.selected) return null
     const effect = retouchPreview.effect
     const faceStyle = mapBox(data.face)
+    const leftEyeStyle = mapBox(data.left_eye)
+    const rightEyeStyle = mapBox(data.right_eye)
     return (
       <>
         {faceStyle ? (
           <div
-            className="pointer-events-none absolute rounded border border-cyan-300/90 ring-1 ring-black/30"
+            className="pointer-events-none absolute"
             style={faceStyle}
-          />
+          >
+            <span className="absolute -left-0.5 -top-0.5 h-4 w-4 rounded-tl border-l-2 border-t-2 border-sky-400/95" />
+            <span className="absolute -right-0.5 -top-0.5 h-4 w-4 rounded-tr border-t-2 border-r-2 border-sky-400/95" />
+            <span className="absolute -bottom-0.5 -left-0.5 h-4 w-4 rounded-bl border-b-2 border-l-2 border-sky-400/95" />
+            <span className="absolute -right-0.5 -bottom-0.5 h-4 w-4 rounded-br border-r-2 border-b-2 border-sky-400/95" />
+          </div>
         ) : null}
+        {leftEyeStyle ? <EyeGuide style={leftEyeStyle} /> : null}
+        {rightEyeStyle ? <EyeGuide style={rightEyeStyle} /> : null}
         {retouchPreview.enabled && data.features.skin
           ? retouchLayer(
               data.face,
@@ -261,97 +304,112 @@ function SinglePlayer({
   }
 
   return (
-    <div
-      ref={frameRef}
-      className="relative h-full min-h-80 w-full overflow-hidden rounded-lg border border-white/10 bg-black shadow-sm"
-    >
-      {src ? (
-        <video
-          ref={videoRef}
-          src={src}
-          playsInline
-          preload="metadata"
-          onLoadedMetadata={updateViewport}
-          onLoadedData={updateViewport}
-          className="absolute inset-0 h-full w-full object-contain"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-white/60">
-          <Loader2 className="size-6 animate-spin" />
-        </div>
-      )}
-
-      {src ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3">
-          <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-lg border border-white/15 bg-black/65 px-2.5 py-2 text-white backdrop-blur">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggle}
-                aria-label={playing ? "Pause" : "Play"}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/15 transition-colors hover:bg-white/25"
-              >
-                {playing ? (
-                  <Pause className="size-4" />
-                ) : (
-                  <Play className="size-4 translate-x-px" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleLoopToggle}
-                aria-label={loop ? "Disable loop" : "Enable loop"}
-                className={cn(
-                  "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors",
-                  loop ? "bg-white/20" : "bg-white/10 hover:bg-white/15"
-                )}
-              >
-                <Repeat className="size-3.5" />
-                Loop
-              </button>
-            </div>
-
-            <label className="flex items-center gap-2 text-xs">
-              <span className="text-white/80">Speed</span>
-              <select
-                value={speed}
-                onChange={(e) => handleSpeedChange(Number(e.target.value))}
-                className="h-8 rounded-md border border-white/20 bg-black/60 px-2 text-xs text-white outline-none"
-              >
-                {SPEEDS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}x
-                  </option>
-                ))}
-              </select>
-            </label>
+    <div className="flex w-full flex-col gap-2">
+      <div
+        ref={frameRef}
+        className="relative aspect-video w-full overflow-hidden rounded-lg border border-white/10 bg-black shadow-sm"
+      >
+        {src ? (
+          <video
+            ref={videoRef}
+            src={src}
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={() => {
+              updateViewport()
+              onFrameTimeChange?.(0)
+            }}
+            onLoadedData={updateViewport}
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-white/60">
+            <Loader2 className="size-6 animate-spin" />
           </div>
-        </div>
-      ) : null}
+        )}
 
-      {maskOverlayUrl ? (
-        <img
-          src={maskOverlayUrl}
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-80 mix-blend-screen"
-        />
-      ) : null}
+        {maskOverlayUrl ? (
+          <img
+            src={maskOverlayUrl}
+            alt=""
+            draggable={false}
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-80 mix-blend-screen"
+          />
+        ) : null}
 
-      {renderRetouchPreview()}
+        {renderRetouchPreview()}
 
-      {maskLoading ? (
-        <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded bg-black/70 px-2.5 py-1 text-[11px] text-white">
-          <Loader2 className="size-3 animate-spin" />
-          Selecting
-        </div>
-      ) : null}
+        {maskLoading ? (
+          <div className="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded bg-black/70 px-2.5 py-1 text-[11px] text-white">
+            <Loader2 className="size-3 animate-spin" />
+            Selecting
+          </div>
+        ) : null}
 
-      {overlay ? (
-        <div className="pointer-events-none absolute inset-0 flex items-end p-4">
-          <div className="pointer-events-auto w-full">{overlay}</div>
+        {overlay ? (
+          <div className="pointer-events-none absolute inset-0 flex items-end p-4">
+            <div className="pointer-events-auto w-full">{overlay}</div>
+          </div>
+        ) : null}
+      </div>
+
+      {src ? (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-card/70 px-2.5 py-2 text-foreground backdrop-blur">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={playing ? "Pause" : "Play"}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-secondary transition-colors hover:bg-secondary/80"
+            >
+              {playing ? (
+                <Pause className="size-4" />
+              ) : (
+                <Play className="size-4 translate-x-px" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleLoopToggle}
+              aria-label={loop ? "Disable loop" : "Enable loop"}
+              className={cn(
+                "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors",
+                loop ? "bg-secondary" : "bg-secondary/60 hover:bg-secondary/80"
+              )}
+            >
+              <Repeat className="size-3.5" />
+              Loop
+            </button>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Speed</span>
+            <select
+              value={speed}
+              onChange={(e) => handleSpeedChange(Number(e.target.value))}
+              className="h-8 rounded-md border border-border/50 bg-background px-2 text-xs outline-none"
+            >
+              {SPEEDS.map((s) => (
+                <option key={s} value={s}>
+                  {s}x
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       ) : null}
     </div>
+  )
+}
+
+function EyeGuide({ style }: { style: React.CSSProperties }) {
+  return (
+    <div
+      className="pointer-events-none absolute border-2 border-dotted border-sky-400/90"
+      style={{
+        ...style,
+        borderRadius: "9999px",
+      }}
+    />
   )
 }

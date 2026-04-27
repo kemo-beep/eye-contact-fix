@@ -2,10 +2,7 @@
 
 import * as React from "react"
 import {
-  Check,
-  Download,
   Eye,
-  Loader2,
   ScanFace,
   Scissors,
   RotateCcw,
@@ -15,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { useJobPolling } from "@/hooks/useJobPolling"
 import {
   DEFAULT_EFFECTS,
-  downloadUrl,
   getJob,
   getRetouchAnalysis,
   previewSubjectMask,
@@ -33,7 +29,11 @@ import { SubjectPicker } from "./subject-picker"
 
 type EditorProps = {
   initialJob: Job
+  onJobChange?: (job: Job) => void
+  comparisonEnabled?: boolean
 }
+
+type RenderPhase = "idle" | "pending" | "rendering" | "done_flash"
 
 const ACTIVE: ReadonlySet<Job["status"]> = new Set(["queued", "processing"])
 const TOOLS: {
@@ -62,7 +62,11 @@ const TOOLS: {
   },
 ]
 
-export function Editor({ initialJob }: EditorProps) {
+export function Editor({
+  initialJob,
+  onJobChange,
+  comparisonEnabled = false,
+}: EditorProps) {
   const [job, setJob] = React.useState<Job>(initialJob)
   const [effects, setEffects] = React.useState<EffectsPayload>(
     normalizeEffects(initialJob.effects)
@@ -79,12 +83,20 @@ export function Editor({ initialJob }: EditorProps) {
     React.useState<RetouchAnalysis | null>(null)
   const [maskLoading, setMaskLoading] = React.useState(false)
   const [maskError, setMaskError] = React.useState<string | null>(null)
+  const [previewTime, setPreviewTime] = React.useState(0)
+  const [previewPlaying, setPreviewPlaying] = React.useState(false)
   const [selectedTool, setSelectedTool] = React.useState<ToolId>("beauty")
+  const [renderPhase, setRenderPhase] = React.useState<RenderPhase>(
+    initialJob.status === "completed" ? "idle" : "pending"
+  )
   const autoRenderTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
   const queuedRender = React.useRef<EffectsPayload | null>(null)
   const renderBusy = React.useRef(false)
+  const flashTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hadRenderActivity = React.useRef(false)
+  const prevPreviewPlaying = React.useRef(false)
 
   const polledId = ACTIVE.has(job.status) ? job.id : null
   const polled = useJobPolling(polledId, 1500)
@@ -102,10 +114,40 @@ export function Editor({ initialJob }: EditorProps) {
   }, [polled.job])
 
   React.useEffect(() => {
+    onJobChange?.(currentJob)
+  }, [currentJob, onJobChange])
+
+  React.useEffect(() => {
     return () => {
       if (autoRenderTimer.current) clearTimeout(autoRenderTimer.current)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
     }
   }, [])
+
+  React.useEffect(() => {
+    if (rendering) {
+      const id = window.setTimeout(() => setRenderPhase("rendering"), 0)
+      return () => window.clearTimeout(id)
+    }
+    if (failed) {
+      const id = window.setTimeout(() => setRenderPhase("idle"), 0)
+      hadRenderActivity.current = false
+      return () => window.clearTimeout(id)
+    }
+    if (completed && hadRenderActivity.current) {
+      const id = window.setTimeout(() => setRenderPhase("done_flash"), 0)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => {
+        setRenderPhase("idle")
+      }, 1200)
+      hadRenderActivity.current = false
+      return () => window.clearTimeout(id)
+    }
+    if (completed && renderPhase === "pending") {
+      const id = window.setTimeout(() => setRenderPhase("idle"), 0)
+      return () => window.clearTimeout(id)
+    }
+  }, [rendering, failed, completed, renderPhase])
 
   React.useEffect(() => {
     const ctrl = new AbortController()
@@ -153,10 +195,14 @@ export function Editor({ initialJob }: EditorProps) {
   }
 
   async function handleRender() {
+    hadRenderActivity.current = true
+    setRenderPhase("pending")
     await performRender(effects)
   }
 
   function scheduleRender(eff: EffectsPayload, delay = 900) {
+    hadRenderActivity.current = true
+    setRenderPhase("pending")
     queuedRender.current = eff
     if (autoRenderTimer.current) clearTimeout(autoRenderTimer.current)
     autoRenderTimer.current = setTimeout(() => {
@@ -166,32 +212,44 @@ export function Editor({ initialJob }: EditorProps) {
     }, delay)
   }
 
-  async function pollForMask(startedAt: string | null) {
-    const start = Date.now()
-    while (Date.now() - start < 30_000) {
-      const data = await getJob(currentJob.id)
-      if (data.mask_preview_url && data.mask_preview_url !== startedAt) {
-        setJob(data)
-        setMaskPreviewUrl(data.mask_preview_url)
-        return
+  const pollForMask = React.useCallback(
+    async (startedAt: string | null) => {
+      const start = Date.now()
+      while (Date.now() - start < 30_000) {
+        const data = await getJob(currentJob.id)
+        if (data.mask_preview_url && data.mask_preview_url !== startedAt) {
+          setJob(data)
+          setMaskPreviewUrl(data.mask_preview_url)
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 700))
       }
-      await new Promise((resolve) => setTimeout(resolve, 700))
-    }
-  }
+    },
+    [currentJob.id]
+  )
 
-  async function requestMaskPreview(nextPoints: ClickPoint[]) {
-    setMaskLoading(true)
-    setMaskError(null)
-    const startedAt = maskPreviewUrl ?? currentJob.mask_preview_url ?? null
-    try {
-      await previewSubjectMask(currentJob.id, 0, nextPoints)
-      await pollForMask(startedAt)
-    } catch (err) {
-      setMaskError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setMaskLoading(false)
-    }
-  }
+  const requestMaskPreview = React.useCallback(
+    async (nextPoints: ClickPoint[], atTime = previewTime) => {
+      setMaskLoading(true)
+      setMaskError(null)
+      const startedAt = maskPreviewUrl ?? currentJob.mask_preview_url ?? null
+      try {
+        await previewSubjectMask(currentJob.id, Math.max(0, atTime), nextPoints)
+        await pollForMask(startedAt)
+      } catch (err) {
+        setMaskError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setMaskLoading(false)
+      }
+    },
+    [
+      currentJob.id,
+      currentJob.mask_preview_url,
+      maskPreviewUrl,
+      pollForMask,
+      previewTime,
+    ]
+  )
 
   function sanitizeEffects(next: EffectsPayload): EffectsPayload {
     if (!retouchAnalysis) return next
@@ -234,9 +292,29 @@ export function Editor({ initialJob }: EditorProps) {
     scheduleRender(nextEffects, 250)
   }
 
+  React.useEffect(() => {
+    if (
+      prevPreviewPlaying.current &&
+      !previewPlaying &&
+      effects.background.enabled &&
+      points.length > 0 &&
+      !maskLoading
+    ) {
+      void requestMaskPreview(points, previewTime)
+    }
+    prevPreviewPlaying.current = previewPlaying
+  }, [
+    previewPlaying,
+    effects.background.enabled,
+    points,
+    maskLoading,
+    previewTime,
+    requestMaskPreview,
+  ])
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden w-full mx-auto max-w-6xl p-2 sm:p-4 font-sans">
-      {failed || (completed && currentJob.output_url) ? (
+      {failed ? (
         <div className="flex items-center justify-end gap-2 rounded-xl border border-border/20 bg-card/40 px-4 py-3">
           {failed ? (
             <Button
@@ -250,22 +328,6 @@ export function Editor({ initialJob }: EditorProps) {
               Retry
             </Button>
           ) : null}
-          {completed && currentJob.output_url ? (
-            <a
-              href={downloadUrl(currentJob.id)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 rounded-lg bg-primary text-primary-foreground shadow-none transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                <Download className="size-4 mr-1.5" />
-                Download
-              </Button>
-            </a>
-          ) : null}
         </div>
       ) : null}
 
@@ -274,6 +336,7 @@ export function Editor({ initialJob }: EditorProps) {
         <div className="flex min-h-0 min-w-0 flex-col gap-3">
           <Preview
             job={currentJob}
+            comparisonEnabled={comparisonEnabled}
             retouchPreview={{
               enabled: effects.beauty.enabled,
               effect: effects.beauty,
@@ -281,34 +344,14 @@ export function Editor({ initialJob }: EditorProps) {
               selected: selectedTool === "beauty",
             }}
             maskOverlayUrl={
-              effects.background.enabled
+              effects.background.enabled && !previewPlaying
                 ? (maskPreviewUrl ?? currentJob.mask_preview_url)
                 : null
             }
             maskLoading={maskLoading}
-            statusOverlay={
-              rendering ? (
-                <div className="rounded-xl bg-background/80 px-5 py-4 text-foreground backdrop-blur-md border border-border/20 shadow-sm">
-                  <div className="mb-2.5 flex items-center justify-between gap-4">
-                    <span className="flex items-center gap-2.5 text-sm font-semibold font-heading">
-                      <Loader2 className="size-4 animate-spin text-primary" />
-                      {currentJob.status === "queued" ? "Queued" : "Rendering"}
-                    </span>
-                    <span className="text-sm font-medium tabular-nums bg-secondary px-2 py-0.5 rounded-md">
-                      {currentJob.progress}%
-                    </span>
-                  </div>
-                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out"
-                      style={{ width: `${currentJob.progress}%` }}
-                    />
-                  </div>
-                </div>
-              ) : completed ? (
-                <ResultBanner job={currentJob} />
-              ) : null
-            }
+            statusOverlay={null}
+            onFrameTimeChange={setPreviewTime}
+            onPlayingChange={setPreviewPlaying}
           />
           {renderError ? (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 shadow-none">
@@ -328,6 +371,8 @@ export function Editor({ initialJob }: EditorProps) {
           onChange={handleEffectsChange}
           onOpenSubjectPicker={() => setPickerOpen(true)}
           selectedTool={selectedTool}
+          renderPhase={renderPhase}
+          progress={currentJob.progress}
           retouchAnalysis={retouchAnalysis}
           samAvailable
         />
@@ -395,19 +440,3 @@ function normalizeEffects(effects?: EffectsPayload | null): EffectsPayload {
   }
 }
 
-function ResultBanner({ job }: { job: Job }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 rounded-lg bg-emerald-500/95 px-4 py-2.5 text-emerald-950 backdrop-blur"
-      )}
-    >
-      <span className="flex size-5 items-center justify-center rounded-full bg-emerald-950/15">
-        <Check className="size-3" />
-      </span>
-      <span className="text-sm font-medium">
-        Render complete · {job.output_format === "webm_alpha" ? "WebM" : "MP4"}
-      </span>
-    </div>
-  )
-}

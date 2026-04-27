@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Pause, Play } from "lucide-react"
+import { Pause, Play, Repeat } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -18,6 +18,9 @@ export function BeforeAfter({ before, after, className }: Props) {
   const draggingRef = React.useRef(false)
   const [pos, setPos] = React.useState(50)
   const [playing, setPlaying] = React.useState(false)
+  const [speed, setSpeed] = React.useState(1)
+  const [loop, setLoop] = React.useState(true)
+  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
   // Keep the "after" track in sync with the "before" track. Using "before" as
   // the master keeps audio scrubbing/seek behavior natural.
@@ -92,24 +95,35 @@ export function BeforeAfter({ before, after, className }: Props) {
     else a.pause()
   }
 
+  React.useEffect(() => {
+    const a = beforeRef.current
+    const b = afterRef.current
+    if (!a || !b) return
+    a.playbackRate = speed
+    b.playbackRate = speed
+    a.loop = loop
+    b.loop = loop
+  }, [speed, loop])
+
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative aspect-video w-full overflow-hidden rounded-xl bg-black select-none shadow-none ring-1 ring-white/5",
-        className
-      )}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      <video
-        ref={beforeRef}
-        src={before}
-        playsInline
-        preload="metadata"
-        className="absolute inset-0 h-full w-full object-contain"
-      />
+    <div className="flex w-full flex-col gap-2">
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative aspect-video w-full select-none overflow-hidden rounded-xl bg-black shadow-none ring-1 ring-white/5",
+          className
+        )}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <video
+          ref={beforeRef}
+          src={before}
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 h-full w-full object-contain"
+        />
 
       <div
         className="absolute inset-0 overflow-hidden"
@@ -126,66 +140,97 @@ export function BeforeAfter({ before, after, className }: Props) {
         />
       </div>
 
-      <button
-        type="button"
-        onClick={togglePlay}
-        aria-label={playing ? "Pause" : "Play"}
-        className={cn(
-          "absolute inset-0 flex items-center justify-center transition-opacity",
-          playing ? "opacity-0 hover:opacity-100" : "opacity-100"
-        )}
-      >
-        <span className="flex size-14 items-center justify-center rounded-full bg-white/90 text-black shadow-sm backdrop-blur-md transition-all hover:scale-110 active:scale-95">
-          {playing ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/40 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-sm ring-1 ring-white/10">
+          Original
         </span>
-      </button>
+        <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black shadow-none ring-1 ring-black/5 backdrop-blur-sm">
+          Corrected
+        </span>
 
-      <span className="pointer-events-none absolute left-4 top-4 rounded-full bg-black/40 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-sm ring-1 ring-white/10">
-        Original
-      </span>
-      <span className="pointer-events-none absolute right-4 top-4 rounded-full bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-black shadow-none ring-1 ring-black/5 backdrop-blur-sm">
-        Corrected
-      </span>
-
-      <div
-        role="slider"
-        tabIndex={0}
-        aria-label="Comparison slider"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(pos)}
-        onPointerDown={onPointerDown}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 2))
-          if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 2))
-        }}
-        className="absolute top-0 bottom-0 w-1 -translate-x-1/2 cursor-ew-resize bg-white/80 shadow-none outline-none ring-0 hover:bg-white transition-colors"
-        style={{ left: `${pos}%` }}
-      >
-        <div className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5 hover:scale-110 transition-transform active:scale-95">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            className="text-black"
-          >
-            <path
-              d="M6 4L2 9L6 14"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M12 4L16 9L12 14"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <div
+          role="slider"
+          tabIndex={0}
+          aria-label="Comparison slider"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(pos)}
+          onPointerDown={onPointerDown}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") setPos((p) => Math.max(0, p - 2))
+            if (e.key === "ArrowRight") setPos((p) => Math.min(100, p + 2))
+          }}
+          className="absolute top-0 bottom-0 w-px -translate-x-1/2 cursor-ew-resize bg-white/50 shadow-none outline-none ring-0 transition-colors hover:bg-white"
+          style={{ left: `${pos}%` }}
+        >
+          <div className="absolute bottom-2 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5 transition-transform hover:scale-105 active:scale-95">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 18 18"
+              fill="none"
+              className="text-black"
+            >
+              <path
+                d="M6 4L2 9L6 14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 4L16 9L12 14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-border/30 bg-card/70 px-2.5 py-2 text-foreground backdrop-blur">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={playing ? "Pause" : "Play"}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-secondary transition-colors hover:bg-secondary/80"
+          >
+            {playing ? (
+              <Pause className="size-4" />
+            ) : (
+              <Play className="size-4 translate-x-px" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoop((v) => !v)}
+            aria-label={loop ? "Disable loop" : "Enable loop"}
+            className={cn(
+              "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition-colors",
+              loop ? "bg-secondary" : "bg-secondary/60 hover:bg-secondary/80"
+            )}
+          >
+            <Repeat className="size-3.5" />
+            Loop
+          </button>
+        </div>
+
+        <label className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Speed</span>
+          <select
+            value={speed}
+            onChange={(e) => setSpeed(Number(e.target.value))}
+            className="h-8 rounded-md border border-border/50 bg-background px-2 text-xs outline-none"
+          >
+            {SPEEDS.map((s) => (
+              <option key={s} value={s}>
+                {s}x
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
     </div>
   )

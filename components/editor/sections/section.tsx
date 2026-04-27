@@ -14,6 +14,7 @@ type SectionProps = {
   /** Accessible id for the toggle. */
   id?: string
   defaultOpen?: boolean
+  status?: React.ReactNode
   children: React.ReactNode
 }
 
@@ -24,6 +25,7 @@ export function InspectorSection({
   onEnabledChange,
   id,
   defaultOpen = true,
+  status,
   children,
 }: SectionProps) {
   const [open, setOpen] = React.useState(defaultOpen)
@@ -53,12 +55,15 @@ export function InspectorSection({
             ) : null}
           </div>
         </button>
-        <Switch
-          id={headerId}
-          checked={enabled}
-          onChange={onEnabledChange}
-          className="shrink-0"
-        />
+        <div className="flex items-center gap-2">
+          {status}
+          <Switch
+            id={headerId}
+            checked={enabled}
+            onChange={onEnabledChange}
+            className="shrink-0"
+          />
+        </div>
       </header>
       <div
         className={cn(

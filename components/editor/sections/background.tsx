@@ -16,6 +16,7 @@ import { FieldRow, InspectorSection } from "./section"
 type Props = {
   value: BackgroundEffect
   onChange: (v: BackgroundEffect) => void
+  status?: React.ReactNode
   /** Called when the user clicks "Refine subject" — opens the picker modal. */
   onOpenSubjectPicker: () => void
   /** Whether SAM2 is available in this deployment. */
@@ -40,6 +41,7 @@ const OUTPUTS: { id: BackgroundOutputMode; label: string }[] = [
 export function BackgroundSection({
   value,
   onChange,
+  status,
   onOpenSubjectPicker,
   samAvailable = true,
 }: Props) {
@@ -52,6 +54,7 @@ export function BackgroundSection({
       title="Background"
       enabled={value.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
+      status={status}
     >
       <FieldRow label="Mask">
         <div className="grid grid-cols-2 gap-1.5">

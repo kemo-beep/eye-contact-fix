@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Sparkles } from "lucide-react"
+import { Check, Sparkles } from "lucide-react"
 
 import type { EffectsPayload, OutputFormat, RetouchAnalysis } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,8 @@ type Props = {
   onChange: (next: EffectsPayload) => void
   onOpenSubjectPicker: () => void
   selectedTool: ToolId
-  rendering?: boolean
+  renderPhase?: "idle" | "pending" | "rendering" | "done_flash"
+  progress?: number
   samAvailable?: boolean
   retouchAnalysis?: RetouchAnalysis | null
 }
@@ -32,6 +33,8 @@ export function Inspector({
   onChange,
   onOpenSubjectPicker,
   selectedTool,
+  renderPhase = "idle",
+  progress,
   samAvailable,
   retouchAnalysis,
 }: Props) {
@@ -62,6 +65,38 @@ export function Inspector({
         ? "Retouch"
         : "Eye contact"
 
+  const activeToolEnabled =
+    selectedTool === "background"
+      ? effects.background.enabled
+      : selectedTool === "beauty"
+        ? effects.beauty.enabled
+        : effects.eye_contact.enabled
+
+  const sectionStatus =
+    !activeToolEnabled ? null : renderPhase === "pending" ? (
+      <span className="text-xs font-medium tabular-nums text-primary">...</span>
+    ) : renderPhase === "rendering" ? (
+      <span className="text-xs font-medium tabular-nums text-primary">
+        {progress ?? 0}%
+      </span>
+    ) : renderPhase === "done_flash" ? (
+      <span
+        className="inline-flex items-center justify-center rounded-full bg-emerald-500/20 p-0.5 text-emerald-600 dark:text-emerald-400"
+        aria-label="Render complete"
+        title="Render complete"
+      >
+        <Check className="size-3" />
+      </span>
+    ) : (
+      <span
+        className="inline-flex items-center justify-center rounded-full bg-muted p-0.5 text-muted-foreground"
+        aria-label="Up to date"
+        title="Up to date"
+      >
+        <Check className="size-3" />
+      </span>
+    )
+
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/20 bg-card/60 backdrop-blur-md shadow-none">
       <header className="flex items-center justify-between gap-3 border-b border-border/20 bg-muted/10 px-4 py-3.5">
@@ -82,6 +117,7 @@ export function Inspector({
             <EyeContactSection
               value={effects.eye_contact}
               onChange={(v) => patch({ eye_contact: v })}
+              status={sectionStatus}
             />
           ) : null}
           {selectedTool === "beauty" ? (
@@ -89,6 +125,7 @@ export function Inspector({
               value={effects.beauty}
               onChange={(v) => patch({ beauty: v })}
               analysis={retouchAnalysis}
+              status={sectionStatus}
             />
           ) : null}
           {selectedTool === "background" ? (
@@ -97,6 +134,7 @@ export function Inspector({
               onChange={(v) => patch({ background: v })}
               onOpenSubjectPicker={onOpenSubjectPicker}
               samAvailable={samAvailable}
+              status={sectionStatus}
             />
           ) : null}
         </div>

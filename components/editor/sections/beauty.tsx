@@ -11,6 +11,7 @@ type Props = {
   value: BeautyEffect
   onChange: (v: BeautyEffect) => void
   analysis?: RetouchAnalysis | null
+  status?: React.ReactNode
 }
 
 const PRESETS: Record<string, Pick<BeautyEffect, "skin_smooth" | "teeth_whiten" | "eye_brighten">> = {
@@ -32,7 +33,12 @@ function activePreset(v: BeautyEffect): string | null {
   return null
 }
 
-export function BeautySection({ value, onChange, analysis }: Props) {
+export function BeautySection({
+  value,
+  onChange,
+  analysis,
+  status,
+}: Props) {
   const current = activePreset(value)
   const features = analysis?.features ?? { skin: true, eyes: true, teeth: true }
 
@@ -51,6 +57,7 @@ export function BeautySection({ value, onChange, analysis }: Props) {
       title="Retouch"
       enabled={value.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
+      status={status}
     >
       <div className="mb-3 flex items-center gap-1">
         {Object.keys(PRESETS).map((name) => (

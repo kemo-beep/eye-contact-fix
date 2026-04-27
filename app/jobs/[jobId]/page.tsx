@@ -2,12 +2,12 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, ArrowLeftRight, Download, Loader2 } from "lucide-react"
 
 import { Editor } from "@/components/editor/editor"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
-import { getJob, type Job } from "@/lib/api"
+import { downloadUrl, getJob, type Job } from "@/lib/api"
 
 export default function JobDetailPage() {
   const params = useParams<{ jobId: string }>()
@@ -17,6 +17,7 @@ export default function JobDetailPage() {
   const [job, setJob] = React.useState<Job | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [comparisonEnabled, setComparisonEnabled] = React.useState(false)
 
   React.useEffect(() => {
     let cancelled = false
@@ -63,7 +64,38 @@ export default function JobDetailPage() {
             {job?.original_filename ?? "Loading job..."}
           </span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          {job?.status === "completed" && job.input_url && job.output_url ? (
+            <Button
+              type="button"
+              variant={comparisonEnabled ? "default" : "secondary"}
+              size="sm"
+              onClick={() => setComparisonEnabled((v) => !v)}
+              className="h-9 rounded-lg"
+              aria-label={
+                comparisonEnabled
+                  ? "Disable comparison slider"
+                  : "Enable comparison slider"
+              }
+              title={
+                comparisonEnabled
+                  ? "Disable comparison slider"
+                  : "Enable comparison slider"
+              }
+            >
+              <ArrowLeftRight className="size-4" />
+            </Button>
+          ) : null}
+          {job?.status === "completed" && job.output_url ? (
+            <a href={downloadUrl(job.id)} target="_blank" rel="noreferrer">
+              <Button type="button" size="sm" className="h-9 rounded-lg">
+                <Download className="mr-1.5 size-4" />
+                Download
+              </Button>
+            </a>
+          ) : null}
+          <ThemeToggle />
+        </div>
       </header>
 
       <section className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 px-6 pb-6">
@@ -91,7 +123,11 @@ export default function JobDetailPage() {
             </div>
           </div>
         ) : (
-          <Editor initialJob={job} />
+          <Editor
+            initialJob={job}
+            onJobChange={setJob}
+            comparisonEnabled={comparisonEnabled}
+          />
         )}
       </section>
     </main>
