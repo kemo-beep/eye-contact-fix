@@ -242,6 +242,24 @@ function SinglePlayer({
     const faceStyle = mapBox(data.face)
     const leftEyeStyle = mapBox(data.left_eye)
     const rightEyeStyle = mapBox(data.right_eye)
+    const noseStyle = mapBox(data.nose)
+    const mouthStyle = mapBox(data.mouth)
+    const reshapeActive =
+      retouchPreview.enabled &&
+      [
+        effect.eye_size,
+        effect.eye_distance,
+        effect.inner_eye,
+        effect.eye_position,
+        effect.nose_width,
+        effect.nose_bridge,
+        effect.nose_height,
+        effect.nose_root,
+        effect.nose_size,
+        effect.mouth_position,
+        effect.smile,
+        effect.mouth_size,
+      ].some((v) => Math.abs(v) > 0.001)
     return (
       <>
         {faceStyle ? (
@@ -257,6 +275,34 @@ function SinglePlayer({
         ) : null}
         {leftEyeStyle ? <EyeGuide style={leftEyeStyle} /> : null}
         {rightEyeStyle ? <EyeGuide style={rightEyeStyle} /> : null}
+        {reshapeActive && data.features.eyes && leftEyeStyle ? (
+          <ReshapeGuide
+            style={leftEyeStyle}
+            tint="sky"
+            transform={`translate(${-(effect.eye_distance + effect.inner_eye * 0.5) * 16}%, ${effect.eye_position * 18}%) scale(${1 + effect.eye_size * 0.16})`}
+          />
+        ) : null}
+        {reshapeActive && data.features.eyes && rightEyeStyle ? (
+          <ReshapeGuide
+            style={rightEyeStyle}
+            tint="sky"
+            transform={`translate(${(effect.eye_distance + effect.inner_eye * 0.5) * 16}%, ${effect.eye_position * 18}%) scale(${1 + effect.eye_size * 0.16})`}
+          />
+        ) : null}
+        {reshapeActive && data.features.nose && noseStyle ? (
+          <ReshapeGuide
+            style={noseStyle}
+            tint="violet"
+            transform={`translateY(${(effect.nose_height - effect.nose_bridge * 0.5 - effect.nose_root * 0.35) * 14}%) scale(${1 + (effect.nose_width + effect.nose_size * 0.6) * 0.12})`}
+          />
+        ) : null}
+        {reshapeActive && data.features.mouth && mouthStyle ? (
+          <ReshapeGuide
+            style={mouthStyle}
+            tint="rose"
+            transform={`translateY(${(effect.mouth_position - effect.smile * 0.35) * 16}%) scale(${1 + effect.mouth_size * 0.12})`}
+          />
+        ) : null}
         {retouchPreview.enabled && data.features.skin
           ? retouchLayer(
               data.face,
@@ -409,6 +455,35 @@ function EyeGuide({ style }: { style: React.CSSProperties }) {
       style={{
         ...style,
         borderRadius: "9999px",
+      }}
+    />
+  )
+}
+
+function ReshapeGuide({
+  style,
+  tint,
+  transform,
+}: {
+  style: React.CSSProperties
+  tint: "sky" | "violet" | "rose"
+  transform: string
+}) {
+  const cls =
+    tint === "sky"
+      ? "border-sky-300/90 bg-sky-300/15"
+      : tint === "violet"
+        ? "border-violet-300/90 bg-violet-300/15"
+        : "border-rose-300/90 bg-rose-300/15"
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute rounded border-2 border-dashed transition-transform duration-75 ease-out",
+        cls
+      )}
+      style={{
+        ...style,
+        transform,
       }}
     />
   )

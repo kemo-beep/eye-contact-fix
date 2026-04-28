@@ -259,8 +259,20 @@ export function Editor({
       skin_smooth: features.skin ? next.beauty.skin_smooth : 0,
       teeth_whiten: features.teeth ? next.beauty.teeth_whiten : 0,
       eye_brighten: features.eyes ? next.beauty.eye_brighten : 0,
+      eye_size: features.eyes ? next.beauty.eye_size : 0,
+      eye_distance: features.eyes ? next.beauty.eye_distance : 0,
+      inner_eye: features.eyes ? next.beauty.inner_eye : 0,
+      eye_position: features.eyes ? next.beauty.eye_position : 0,
+      nose_width: features.nose ? next.beauty.nose_width : 0,
+      nose_bridge: features.nose ? next.beauty.nose_bridge : 0,
+      nose_height: features.nose ? next.beauty.nose_height : 0,
+      nose_root: features.nose ? next.beauty.nose_root : 0,
+      nose_size: features.nose ? next.beauty.nose_size : 0,
+      mouth_position: features.mouth ? next.beauty.mouth_position : 0,
+      smile: features.mouth ? next.beauty.smile : 0,
+      mouth_size: features.mouth ? next.beauty.mouth_size : 0,
     }
-    if (!features.skin && !features.eyes && !features.teeth) {
+    if (!features.skin && !features.eyes && !features.nose && !features.mouth && !features.teeth) {
       beauty.enabled = false
     }
     return { ...next, beauty }
@@ -439,4 +451,3 @@ function normalizeEffects(effects?: EffectsPayload | null): EffectsPayload {
     },
   }
 }
-

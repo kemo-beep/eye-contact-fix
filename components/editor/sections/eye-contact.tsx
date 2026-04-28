@@ -22,6 +22,7 @@ export function EyeContactSection({
       enabled={value.enabled}
       onEnabledChange={(enabled) => onChange({ ...value, enabled })}
       status={status}
+      collapsible={false}
     >
       <FieldRow label="Strength" value={`${Math.round(value.strength * 100)}%`}>
         <Slider

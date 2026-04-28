@@ -31,7 +31,10 @@ export function Slider({
       max={max}
       step={step}
       disabled={disabled}
-      className={cn("relative flex w-full touch-none select-none items-center py-2", className)}
+      className={cn(
+        "relative flex w-full touch-none select-none items-center px-2 py-2",
+        className
+      )}
     >
       <Primitive.Control className="relative w-full">
         <Primitive.Track className="bg-muted relative h-1 w-full grow overflow-hidden rounded-full">

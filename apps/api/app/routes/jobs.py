@@ -197,6 +197,8 @@ async def retouch_analysis(
         face=box(info.face),
         left_eye=box(info.left_eye),
         right_eye=box(info.right_eye),
+        nose=box(info.nose),
+        mouth=box(info.mouth),
         teeth=box(info.teeth),
         features=info.features,
     )

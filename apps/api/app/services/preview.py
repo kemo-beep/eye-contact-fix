@@ -78,6 +78,8 @@ class RetouchAnalysisInfo:
     face: Optional[RetouchBoxInfo]
     left_eye: Optional[RetouchBoxInfo]
     right_eye: Optional[RetouchBoxInfo]
+    nose: Optional[RetouchBoxInfo]
+    mouth: Optional[RetouchBoxInfo]
     teeth: Optional[RetouchBoxInfo]
     features: dict[str, bool]
 
@@ -97,6 +99,11 @@ INNER_LIPS = [
     78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311,
     312, 13, 82, 81, 80, 191,
 ]
+OUTER_LIPS = [
+    61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318,
+    402, 317, 14, 87, 178, 88, 95,
+]
+NOSE_REGION = [6, 98, 327, 168, 197, 195, 5, 4, 1, 2, 64, 294, 129, 358]
 
 
 def _download_input(input_url: str, dest: str) -> None:
@@ -263,8 +270,16 @@ def analyze_retouch_frame(
             face=None,
             left_eye=None,
             right_eye=None,
+            nose=None,
+            mouth=None,
             teeth=None,
-            features={"skin": False, "eyes": False, "teeth": False},
+            features={
+                "skin": False,
+                "eyes": False,
+                "nose": False,
+                "mouth": False,
+                "teeth": False,
+            },
         )
 
     landmarks = result.multi_face_landmarks[0].landmark
@@ -273,6 +288,8 @@ def analyze_retouch_frame(
     face = _box(pts[FACE_OVAL], pad=max(width, height) * 0.012, width=width, height=height)
     left_eye = _box(pts[LEFT_EYE_OUTLINE], pad=8.0, width=width, height=height)
     right_eye = _box(pts[RIGHT_EYE_OUTLINE], pad=8.0, width=width, height=height)
+    nose = _box(pts[NOSE_REGION], pad=max(width, height) * 0.012, width=width, height=height)
+    mouth = _box(pts[OUTER_LIPS], pad=max(width, height) * 0.01, width=width, height=height)
 
     mouth_pts = pts[INNER_LIPS]
     mouth_box = _box(mouth_pts, pad=4.0, width=width, height=height)
@@ -288,12 +305,22 @@ def analyze_retouch_frame(
         return box.width > 8 and box.height / max(1.0, box.width) > 0.12
 
     eyes_ok = eye_open(left_eye) and eye_open(right_eye)
+    nose_ok = nose.width > 8 and nose.height > 8
+    mouth_ok = mouth.width > 8 and mouth.height > 4
     return RetouchAnalysisInfo(
         width=width,
         height=height,
         face=face,
         left_eye=left_eye if eyes_ok else None,
         right_eye=right_eye if eyes_ok else None,
+        nose=nose if nose_ok else None,
+        mouth=mouth if mouth_ok else None,
         teeth=teeth,
-        features={"skin": True, "eyes": eyes_ok, "teeth": teeth is not None},
+        features={
+            "skin": True,
+            "eyes": eyes_ok,
+            "nose": nose_ok,
+            "mouth": mouth_ok,
+            "teeth": teeth is not None,
+        },
     )

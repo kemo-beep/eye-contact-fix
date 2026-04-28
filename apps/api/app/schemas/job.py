@@ -97,6 +97,8 @@ class RetouchBox(BaseModel):
 class RetouchFeatures(BaseModel):
     skin: bool = False
     eyes: bool = False
+    nose: bool = False
+    mouth: bool = False
     teeth: bool = False
 
 
@@ -106,6 +108,8 @@ class RetouchAnalysisResponse(BaseModel):
     face: Optional[RetouchBox] = None
     left_eye: Optional[RetouchBox] = None
     right_eye: Optional[RetouchBox] = None
+    nose: Optional[RetouchBox] = None
+    mouth: Optional[RetouchBox] = None
     teeth: Optional[RetouchBox] = None
     features: RetouchFeatures
 

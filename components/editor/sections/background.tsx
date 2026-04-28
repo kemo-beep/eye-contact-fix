@@ -55,6 +55,7 @@ export function BackgroundSection({
       enabled={value.enabled}
       onEnabledChange={(enabled) => patch({ enabled })}
       status={status}
+      collapsible={false}
     >
       <FieldRow label="Mask">
         <div className="grid grid-cols-2 gap-1.5">

@@ -15,6 +15,8 @@ type SectionProps = {
   id?: string
   defaultOpen?: boolean
   status?: React.ReactNode
+  disableContent?: boolean
+  collapsible?: boolean
   children: React.ReactNode
 }
 
@@ -26,6 +28,8 @@ export function InspectorSection({
   id,
   defaultOpen = true,
   status,
+  disableContent,
+  collapsible = true,
   children,
 }: SectionProps) {
   const [open, setOpen] = React.useState(defaultOpen)
@@ -36,16 +40,22 @@ export function InspectorSection({
       <header className="flex items-center justify-between gap-2 px-3 py-2.5">
         <button
           type="button"
-          onClick={() => setOpen((p) => !p)}
+          onClick={() => {
+            if (collapsible) setOpen((p) => !p)
+          }}
           className="group flex min-w-0 flex-1 items-center gap-2 text-left"
-          aria-expanded={open}
+          aria-expanded={collapsible ? open : true}
         >
-          <ChevronDown
-            className={cn(
-              "size-3.5 shrink-0 text-muted-foreground transition-transform",
-              open ? "rotate-0" : "-rotate-90"
-            )}
-          />
+          {collapsible ? (
+            <ChevronDown
+              className={cn(
+                "size-3.5 shrink-0 text-muted-foreground transition-transform",
+                open ? "rotate-0" : "-rotate-90"
+              )}
+            />
+          ) : (
+            <span className="size-3.5 shrink-0" />
+          )}
           <div className="flex min-w-0 flex-col">
             <span className="text-sm font-medium tracking-tight">{title}</span>
             {description ? (
@@ -68,7 +78,7 @@ export function InspectorSection({
       <div
         className={cn(
           "grid transition-all duration-200 ease-out",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          !collapsible || open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
       >
         <div className="overflow-hidden">
@@ -78,7 +88,7 @@ export function InspectorSection({
               enabled ? "opacity-100" : "opacity-50"
             )}
           >
-            <fieldset disabled={!enabled} className="contents">
+            <fieldset disabled={disableContent ?? !enabled} className="contents">
               {children}
             </fieldset>
           </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Sparkles } from "lucide-react"
+import { Check } from "lucide-react"
 
 import type { EffectsPayload, OutputFormat, RetouchAnalysis } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -53,18 +53,6 @@ export function Inspector({
     onChange(next)
   }
 
-  const enabledCount =
-    Number(effects.eye_contact.enabled) +
-    Number(effects.beauty.enabled) +
-    Number(effects.background.enabled)
-
-  const activeTitle =
-    selectedTool === "background"
-      ? "Remove background"
-      : selectedTool === "beauty"
-        ? "Retouch"
-        : "Eye contact"
-
   const activeToolEnabled =
     selectedTool === "background"
       ? effects.background.enabled
@@ -99,18 +87,6 @@ export function Inspector({
 
   return (
     <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border/20 bg-card/60 backdrop-blur-md shadow-none">
-      <header className="flex items-center justify-between gap-3 border-b border-border/20 bg-muted/10 px-4 py-3.5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <Sparkles className="size-3.5" />
-          </div>
-          <span className="font-heading text-sm font-semibold tracking-tight text-foreground">{activeTitle}</span>
-        </div>
-        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-secondary-foreground tabular-nums tracking-wide">
-          {enabledCount} ACTIVE
-        </span>
-      </header>
-
       <div className="flex-1 overflow-y-auto">
         <div className="p-1">
           {selectedTool === "eye_contact" ? (

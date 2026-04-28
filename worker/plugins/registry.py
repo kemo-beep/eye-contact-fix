@@ -8,6 +8,7 @@ from worker.plugins.auto_frame.plugin import AutoFramePlugin
 from worker.plugins.background_blur.plugin import BackgroundBlurPlugin
 from worker.plugins.eye_contact.plugin import EyeContactPlugin
 from worker.plugins.eye_enhance.plugin import EyeEnhancePlugin
+from worker.plugins.face_reshape.plugin import FaceReshapePlugin
 from worker.plugins.face_relight.plugin import FaceRelightPlugin
 from worker.plugins.skin_retouch.plugin import SkinRetouchPlugin
 from worker.plugins.teeth_whiten.plugin import TeethWhitenPlugin
@@ -18,6 +19,7 @@ PLUGIN_REGISTRY: dict[str, type[VideoPlugin]] = {
     SkinRetouchPlugin.id: SkinRetouchPlugin,
     TeethWhitenPlugin.id: TeethWhitenPlugin,
     EyeEnhancePlugin.id: EyeEnhancePlugin,
+    FaceReshapePlugin.id: FaceReshapePlugin,
     FaceRelightPlugin.id: FaceRelightPlugin,
     BackgroundBlurPlugin.id: BackgroundBlurPlugin,
     AutoFramePlugin.id: AutoFramePlugin,
@@ -68,6 +70,20 @@ def configs_from_effects(
         skin_smooth = float(beauty.get("skin_smooth", 0.0))
         eye_brighten = float(beauty.get("eye_brighten", 0.0))
         teeth_whiten = float(beauty.get("teeth_whiten", 0.0))
+        reshape_keys = [
+            "eye_size",
+            "eye_distance",
+            "inner_eye",
+            "eye_position",
+            "nose_width",
+            "nose_bridge",
+            "nose_height",
+            "nose_root",
+            "nose_size",
+            "mouth_position",
+            "smile",
+            "mouth_size",
+        ]
         if skin_smooth > 0:
             configs.append(
                 {
@@ -82,6 +98,14 @@ def configs_from_effects(
                     "id": "eye_enhance",
                     "enabled": True,
                     "settings": {"eye_brighten": eye_brighten},
+                }
+            )
+        if any(abs(float(beauty.get(key, 0.0))) > 1e-4 for key in reshape_keys):
+            configs.append(
+                {
+                    "id": "face_reshape",
+                    "enabled": True,
+                    "settings": {key: float(beauty.get(key, 0.0)) for key in reshape_keys},
                 }
             )
         if teeth_whiten > 0:
@@ -114,4 +138,3 @@ def configs_from_effects(
         )
 
     return configs
-

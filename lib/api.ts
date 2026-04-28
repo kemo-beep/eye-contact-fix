@@ -101,10 +101,14 @@ export type RetouchAnalysis = {
   face?: RetouchBox | null
   left_eye?: RetouchBox | null
   right_eye?: RetouchBox | null
+  nose?: RetouchBox | null
+  mouth?: RetouchBox | null
   teeth?: RetouchBox | null
   features: {
     skin: boolean
     eyes: boolean
+    nose: boolean
+    mouth: boolean
     teeth: boolean
   }
 }
